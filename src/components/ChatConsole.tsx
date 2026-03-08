@@ -2,11 +2,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { useRef, useEffect } from "react";
 
+export interface ChatAttachment {
+  name: string;
+  type: string;
+  url: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  attachments?: ChatAttachment[];
 }
 
 interface ChatConsoleProps {
@@ -27,7 +34,7 @@ const ChatConsole = ({ messages, isProcessing }: ChatConsoleProps) => {
     <div className="w-full max-w-2xl mx-auto">
       <div
         ref={scrollRef}
-        className="max-h-60 overflow-y-auto space-y-3 px-4 py-3"
+        className="max-h-72 overflow-y-auto space-y-3 px-4 py-3"
       >
         <AnimatePresence>
           {messages.map((msg) => (
@@ -46,6 +53,30 @@ const ChatConsole = ({ messages, isProcessing }: ChatConsoleProps) => {
                     : "bg-secondary border border-border text-foreground"
                 }`}
               >
+                {/* Show attachments */}
+                {msg.attachments && msg.attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {msg.attachments.map((att, i) =>
+                      att.type.startsWith("image/") ? (
+                        <img
+                          key={i}
+                          src={att.url}
+                          alt={att.name}
+                          className="max-w-[200px] max-h-[150px] rounded-md object-cover border border-border"
+                        />
+                      ) : (
+                        <div
+                          key={i}
+                          className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-1.5 text-xs text-muted-foreground"
+                        >
+                          <span>📎</span>
+                          <span className="truncate max-w-[150px]">{att.name}</span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+
                 {msg.role === "user" ? (
                   <p>{msg.content}</p>
                 ) : (

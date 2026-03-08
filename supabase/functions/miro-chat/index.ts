@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { query, messages } = body;
+    const { query, messages, attachments } = body;
 
     if (!query || typeof query !== "string" || query.trim().length === 0 || query.length > 2000) {
       return new Response(JSON.stringify({ error: "Invalid query. Must be a non-empty string under 2000 characters." }), {
@@ -88,12 +88,34 @@ ABSOLUTE RULES:
 5. Keep responses under 3 sentences unless asked for more detail.
 6. Be factually accurate. Give clear, direct answers.
 7. Never say "I'm an AI" or "language model" — you are MIRO.
-8. For knowledge questions, give the actual answer, not just "I can help with that".`;
+8. For knowledge questions, give the actual answer, not just "I can help with that".
+9. When images are shared, analyze them thoroughly and describe what you see. Answer questions about the image content.
+10. When documents/files are shared, acknowledge them and help with their content.`;
+
+    // Build the user message content - support multimodal (text + images)
+    const safeAttachments = Array.isArray(attachments) ? attachments.slice(0, 5) : [];
+    const imageAttachments = safeAttachments.filter(
+      (a: { type: string; url: string }) => a.type?.startsWith("image/")
+    );
+
+    let userContent: any;
+    if (imageAttachments.length > 0) {
+      // Multimodal message with images
+      userContent = [
+        { type: "text", text: query.trim() },
+        ...imageAttachments.map((a: { url: string }) => ({
+          type: "image_url",
+          image_url: { url: a.url },
+        })),
+      ];
+    } else {
+      userContent = query.trim();
+    }
 
     const chatMessages = [
       { role: "system", content: systemPrompt },
       ...safeMessages,
-      { role: "user", content: query.trim() },
+      { role: "user", content: userContent },
     ];
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -103,7 +125,7 @@ ABSOLUTE RULES:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: chatMessages,
         max_tokens: 500,
       }),
@@ -112,6 +134,20 @@ ABSOLUTE RULES:
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
       console.error("AI gateway error:", aiResponse.status, errorText);
+
+      if (aiResponse.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please wait a moment and try again." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (aiResponse.status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       return new Response(JSON.stringify({ error: "Failed to process request. Please try again." }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
