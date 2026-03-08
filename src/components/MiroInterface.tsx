@@ -26,45 +26,94 @@ const MiroInterface = () => {
     ]);
   }, []);
 
+  // Preload voices
+  useEffect(() => {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  }, []);
+
   const speakResponse = useCallback(async (text: string) => {
     setIsSpeaking(true);
     setStatusText("SPEAKING");
     
-    // Use browser built-in TTS
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.92;
-    utterance.pitch = 1.3;
-    utterance.volume = 1.0;
     
-    // Auto-detect language and pick the best female voice
-    const voices = window.speechSynthesis.getVoices();
     const detectLang = (t: string): string => {
-      if (/[\u0C80-\u0CFF]/.test(t)) return "kn"; // Kannada - priority
-      if (/[\u0900-\u097F]/.test(t)) return "hi"; // Hindi - priority
+      if (/[\u0C80-\u0CFF]/.test(t)) return "kn";
+      if (/[\u0900-\u097F]/.test(t)) return "hi";
       if (/[\u0B80-\u0BFF]/.test(t)) return "ta";
       if (/[\u0C00-\u0C7F]/.test(t)) return "te";
       if (/[\u0980-\u09FF]/.test(t)) return "bn";
       if (/[\u0A80-\u0AFF]/.test(t)) return "gu";
       if (/[\u0A00-\u0A7F]/.test(t)) return "pa";
       if (/[\u0D00-\u0D7F]/.test(t)) return "ml";
-      if (/[\u3040-\u309F\u30A0-\u30FF]/.test(t)) return "ja";
-      if (/[\uAC00-\uD7AF]/.test(t)) return "ko";
-      if (/[\u4E00-\u9FFF]/.test(t)) return "zh";
-      if (/[\u0600-\u06FF]/.test(t)) return "ar";
       return "en";
     };
     const lang = detectLang(text);
-    utterance.lang = lang;
     
-    // Find best female voice for detected language
-    const langVoice = voices.find(v => v.lang.startsWith(lang) && v.name.toLowerCase().includes("female"))
-      || voices.find(v => v.lang.startsWith(lang))
-      || voices.find(v => v.name.includes("Google UK English Female"))
-      || voices.find(v => v.name === "Samantha")
-      || voices.find(v => v.name.toLowerCase().includes("female") && v.lang.startsWith("en"))
-      || voices.find(v => v.lang.startsWith("en"));
-    if (langVoice) utterance.voice = langVoice;
+    // Language-specific voice & settings map
+    const langConfig: Record<string, { langCode: string; rate: number; pitch: number; voiceNames: string[] }> = {
+      kn: {
+        langCode: "kn-IN",
+        rate: 0.85,
+        pitch: 1.15,
+        voiceNames: ["Google ಕನ್ನಡ", "Microsoft Sapna", "Sapna", "kn-IN", "kannada"],
+      },
+      hi: {
+        langCode: "hi-IN",
+        rate: 0.88,
+        pitch: 1.2,
+        voiceNames: ["Google हिन्दी", "Microsoft Swara", "Microsoft Kalpana", "Swara", "Kalpana", "Lekha", "hi-IN", "hindi"],
+      },
+      ta: { langCode: "ta-IN", rate: 0.85, pitch: 1.15, voiceNames: ["Google தமிழ்", "ta-IN", "tamil"] },
+      te: { langCode: "te-IN", rate: 0.85, pitch: 1.15, voiceNames: ["Google తెలుగు", "te-IN", "telugu"] },
+      bn: { langCode: "bn-IN", rate: 0.85, pitch: 1.15, voiceNames: ["Google বাংলা", "bn-IN", "bengali"] },
+      gu: { langCode: "gu-IN", rate: 0.85, pitch: 1.15, voiceNames: ["Google ગુજરાતી", "gu-IN", "gujarati"] },
+      pa: { langCode: "pa-IN", rate: 0.85, pitch: 1.15, voiceNames: ["pa-IN", "punjabi"] },
+      ml: { langCode: "ml-IN", rate: 0.85, pitch: 1.15, voiceNames: ["Google മലയാളം", "ml-IN", "malayalam"] },
+      en: {
+        langCode: "en-IN",
+        rate: 0.92,
+        pitch: 1.25,
+        voiceNames: ["Microsoft Neerja Online (Natural)", "Microsoft Swara Online (Natural)", "Google UK English Female", "Samantha", "Neerja", "Zira"],
+      },
+    };
+    
+    const config = langConfig[lang] || langConfig.en;
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = config.rate;
+    utterance.pitch = config.pitch;
+    utterance.volume = 1.0;
+    utterance.lang = config.langCode;
+    
+    // Find the best matching voice
+    const voices = window.speechSynthesis.getVoices();
+    let bestVoice: SpeechSynthesisVoice | undefined;
+    
+    // First: try exact name matches from our priority list
+    for (const name of config.voiceNames) {
+      bestVoice = voices.find(v => v.name.includes(name));
+      if (bestVoice) break;
+    }
+    
+    // Second: any voice matching the language with "female" or "Natural" in name
+    if (!bestVoice) {
+      bestVoice = voices.find(v => v.lang === config.langCode && v.name.toLowerCase().includes("natural"))
+        || voices.find(v => v.lang === config.langCode && v.name.toLowerCase().includes("female"))
+        || voices.find(v => v.lang === config.langCode)
+        || voices.find(v => v.lang.startsWith(lang));
+    }
+    
+    // Fallback: Indian English female
+    if (!bestVoice) {
+      bestVoice = voices.find(v => v.lang === "en-IN")
+        || voices.find(v => v.name.includes("Google UK English Female"))
+        || voices.find(v => v.name === "Samantha")
+        || voices.find(v => v.lang.startsWith("en"));
+    }
+    
+    if (bestVoice) utterance.voice = bestVoice;
     
     utterance.onend = () => {
       setIsSpeaking(false);
