@@ -179,16 +179,11 @@ const MiroInterface = () => {
     addMessage("user", query, attachments);
 
     try {
-      // Refresh session to handle token expiry after idle periods
-      let { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
-      if (sessionError || !sessionData.session) {
-        // Retry once - getSession may recover from localStorage
-        const { data: retryData } = await supabase.auth.getSession();
-        if (!retryData.session) {
-          toast.error("Session expired. Please sign in again.");
-          navigate("/auth", { replace: true });
-          return;
-        }
+      // Try to refresh session, but don't block on failure - proceed with existing token
+      try {
+        await supabase.auth.refreshSession();
+      } catch (refreshErr) {
+        console.warn("Session refresh failed, proceeding with existing token:", refreshErr);
       }
 
       const recentMessages = messages
@@ -196,21 +191,47 @@ const MiroInterface = () => {
         .slice(-6)
         .map(m => ({ role: m.role, content: m.content }));
 
-      const { data, error } = await supabase.functions.invoke("miro-chat", {
-        body: {
-          query,
-          messages: recentMessages,
-          attachments: attachments?.map(a => ({ type: a.type, url: a.url })),
-        },
-      });
-
-      if (error) {
-        if (error.message?.includes("401") || error.message?.includes("Unauthorized")) {
-          toast.error("Session expired. Please sign in again.");
-          window.location.href = "/auth";
-          return;
+      // Retry logic for network failures
+      let lastError: any = null;
+      let data: any = null;
+      
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const result = await supabase.functions.invoke("miro-chat", {
+            body: {
+              query,
+              messages: recentMessages,
+              attachments: attachments?.map(a => ({ type: a.type, url: a.url })),
+            },
+          });
+          
+          if (result.error) {
+            if (result.error.message?.includes("401") || result.error.message?.includes("Unauthorized")) {
+              // Try to recover session once
+              const { data: sessionData } = await supabase.auth.getSession();
+              if (!sessionData.session) {
+                toast.error("Session expired. Please sign in again.");
+                navigate("/auth", { replace: true });
+                return;
+              }
+              // Session exists, retry
+              continue;
+            }
+            throw result.error;
+          }
+          
+          data = result.data;
+          break;
+        } catch (err) {
+          lastError = err;
+          if (attempt === 0) {
+            await new Promise(r => setTimeout(r, 500)); // brief delay before retry
+          }
         }
-        throw error;
+      }
+
+      if (!data && lastError) {
+        throw lastError;
       }
 
       const responseText = data?.response || "I couldn't process that request.";
@@ -222,10 +243,16 @@ const MiroInterface = () => {
       const msg = e?.message || "";
       if (msg.includes("429")) {
         toast.error("Too many requests. Please wait a moment.");
+        addMessage("assistant", "I'm getting too many requests right now. Please wait a moment and try again.");
       } else if (msg.includes("402")) {
         toast.error("AI credits exhausted. Please add credits.");
+        addMessage("assistant", "AI credits have run out. Please add credits to continue.");
+      } else if (msg.includes("fetch") || msg.includes("network")) {
+        toast.error("Network error. Please check your connection.");
+        addMessage("assistant", "I'm having trouble connecting. Please check your internet and try again.");
       } else {
         toast.error("Failed to process your request");
+        addMessage("assistant", "Sorry, I couldn't process that. Please try again.");
       }
       setIsProcessing(false);
       setStatusText('Say "MIRO" for another question');
