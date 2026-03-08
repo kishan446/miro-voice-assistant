@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Send } from "lucide-react";
+import { Send, Trash2 } from "lucide-react";
 import MiroOrb from "./MiroOrb";
 import VoiceVisualizer from "./VoiceVisualizer";
 import ChatConsole, { type ChatMessage } from "./ChatConsole";
