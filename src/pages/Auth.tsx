@@ -4,9 +4,8 @@ import { lovable } from "@/integrations/lovable/index";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
-type AuthStep = "form" | "otp";
+type AuthStep = "form" | "check-email";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -14,15 +13,14 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<AuthStep>("form");
-  const [otp, setOtp] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) navigate("/", { replace: true });
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) navigate("/", { replace: true });
     });
 
@@ -41,50 +39,32 @@ const Auth = () => {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: { emailRedirectTo: window.location.origin + "/auth" },
         });
         if (error) throw error;
-        toast.success("Verification code sent to your email!");
-        setStep("otp");
+        setStep("check-email");
+        toast.success("Confirmation email sent! Check your inbox.");
       }
     } catch (error: any) {
       console.error("Auth error:", error.message);
-      toast.error(isLogin ? "Invalid email or password." : "Unable to create account. Please try again.");
+      if (error.message?.includes("Email not confirmed")) {
+        toast.error("Please verify your email first. Check your inbox for the confirmation link.");
+      } else {
+        toast.error(isLogin ? "Invalid email or password." : "Unable to create account. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyOtp = async () => {
-    if (otp.length !== 6) return;
+  const handleResendConfirmation = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: "signup",
-      });
+      const { error } = await supabase.auth.resend({ type: "signup", email });
       if (error) throw error;
-      toast.success("Email verified! You're signed in.");
-    } catch (error: any) {
-      console.error("OTP error:", error.message);
-      toast.error("Invalid or expired code. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendOtp = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email,
-      });
-      if (error) throw error;
-      toast.success("New code sent!");
+      toast.success("Confirmation email resent!");
     } catch {
-      toast.error("Failed to resend code.");
+      toast.error("Failed to resend. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -96,9 +76,7 @@ const Auth = () => {
       const { error } = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
       });
-      if (error) {
-        toast.error("Google sign-in failed. Please try again.");
-      }
+      if (error) toast.error("Google sign-in failed. Please try again.");
     } catch {
       toast.error("Google sign-in failed. Please try again.");
     } finally {
@@ -197,56 +175,39 @@ const Auth = () => {
             </motion.div>
           ) : (
             <motion.div
-              key="otp"
+              key="check-email"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               className="flex flex-col items-center"
             >
-              <p className="text-muted-foreground text-center mb-2 font-body">
-                Enter the 6-digit code sent to
+              <div className="text-4xl mb-4">📧</div>
+              <p className="text-foreground text-center mb-2 font-body font-semibold">
+                Check your email
               </p>
-              <p className="text-foreground text-center mb-8 font-body font-semibold text-sm">
+              <p className="text-muted-foreground text-center mb-2 font-body text-sm">
+                We sent a confirmation link to
+              </p>
+              <p className="text-foreground text-center mb-6 font-body font-semibold text-sm">
                 {email}
               </p>
-
-              <InputOTP
-                maxLength={6}
-                value={otp}
-                onChange={setOtp}
-                onComplete={handleVerifyOtp}
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} className="bg-card/50 border-border text-foreground" />
-                  <InputOTPSlot index={1} className="bg-card/50 border-border text-foreground" />
-                  <InputOTPSlot index={2} className="bg-card/50 border-border text-foreground" />
-                  <InputOTPSlot index={3} className="bg-card/50 border-border text-foreground" />
-                  <InputOTPSlot index={4} className="bg-card/50 border-border text-foreground" />
-                  <InputOTPSlot index={5} className="bg-card/50 border-border text-foreground" />
-                </InputOTPGroup>
-              </InputOTP>
+              <p className="text-muted-foreground text-center mb-8 font-body text-xs">
+                Click the link in your email to verify your account, then come back and sign in.
+              </p>
 
               <button
-                onClick={handleVerifyOtp}
-                disabled={loading || otp.length !== 6}
-                className="w-full bg-primary text-primary-foreground font-body font-semibold rounded-lg px-4 py-3 transition-opacity disabled:opacity-50 mt-6"
+                onClick={() => { setStep("form"); setIsLogin(true); }}
+                className="w-full bg-primary text-primary-foreground font-body font-semibold rounded-lg px-4 py-3 transition-opacity"
               >
-                {loading ? "Verifying..." : "Verify"}
+                Back to Sign In
               </button>
 
               <button
-                onClick={handleResendOtp}
+                onClick={handleResendConfirmation}
                 disabled={loading}
-                className="text-muted-foreground text-sm font-body mt-4 hover:text-foreground transition-colors"
+                className="text-muted-foreground text-sm font-body mt-4 hover:text-foreground transition-colors disabled:opacity-50"
               >
-                Didn't get a code? Resend
-              </button>
-
-              <button
-                onClick={() => { setStep("form"); setOtp(""); }}
-                className="text-muted-foreground text-sm font-body mt-2 hover:text-foreground transition-colors"
-              >
-                ← Back
+                Didn't get it? Resend
               </button>
             </motion.div>
           )}
