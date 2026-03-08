@@ -368,6 +368,16 @@ const MiroInterface = () => {
           >
             <Send className="w-4 h-4" />
           </button>
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setMessages([])}
+              className="bg-destructive/20 hover:bg-destructive/30 border border-destructive/50 rounded-lg px-4 py-3 text-destructive transition-colors"
+              title="Clear chat history"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </form>
       </motion.div>
 
