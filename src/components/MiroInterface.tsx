@@ -56,8 +56,6 @@ const MiroInterface = () => {
     };
     window.speechSynthesis.speak(utterance);
   }, []);
-    }
-  }, []);
 
   const processQuery = useCallback(async (query: string) => {
     if (isProcessingRef.current) return;
