@@ -475,7 +475,7 @@ const MiroInterface = () => {
           MIRO
         </h1>
         <p className="font-body text-muted-foreground text-lg mt-2 tracking-wide">
-          Voice-Activated AI Assistant
+          Voice-Chat AI Assistant
         </p>
       </motion.div>
 
