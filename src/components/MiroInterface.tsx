@@ -33,14 +33,20 @@ const MiroInterface = () => {
     // Use browser built-in TTS
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;
-    utterance.pitch = 0.9;
+    utterance.rate = 0.95;
+    utterance.pitch = 1.2;
     utterance.volume = 1.0;
     
+    // Pick a beautiful Indian-accent female voice
     const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => v.name.includes("Google UK English Male")) 
-      || voices.find(v => v.name.includes("Daniel"))
-      || voices.find(v => v.lang === "en-GB" && v.name.toLowerCase().includes("male"))
+    const preferred = voices.find(v => v.name.includes("Google हिन्दी"))
+      || voices.find(v => v.name.toLowerCase().includes("veena"))
+      || voices.find(v => v.name.toLowerCase().includes("lekha"))
+      || voices.find(v => v.lang === "en-IN" && v.name.toLowerCase().includes("female"))
+      || voices.find(v => v.lang === "en-IN")
+      || voices.find(v => v.name.includes("Google UK English Female"))
+      || voices.find(v => v.name.includes("Samantha"))
+      || voices.find(v => v.name.toLowerCase().includes("female") && v.lang.startsWith("en"))
       || voices.find(v => v.lang.startsWith("en"));
     if (preferred) utterance.voice = preferred;
     
