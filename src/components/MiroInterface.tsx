@@ -37,6 +37,21 @@ const MiroInterface = () => {
     window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
   }, []);
 
+  // Keep session alive with periodic refresh every 10 minutes
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const { error } = await supabase.auth.refreshSession();
+        if (error) {
+          console.warn("Session refresh failed:", error.message);
+        }
+      } catch (e) {
+        console.warn("Session refresh error:", e);
+      }
+    }, 10 * 60 * 1000); // every 10 minutes
+    return () => clearInterval(interval);
+  }, []);
+
   const handleLogout = async () => {
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch {}
