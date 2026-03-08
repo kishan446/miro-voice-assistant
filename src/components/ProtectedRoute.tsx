@@ -12,7 +12,19 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+      if (session) {
+        // Proactively refresh if token is about to expire (within 5 min)
+        const expiresAt = session.expires_at;
+        if (expiresAt && expiresAt * 1000 - Date.now() < 5 * 60 * 1000) {
+          supabase.auth.refreshSession().then(({ data }) => {
+            setSession(data.session);
+          });
+        } else {
+          setSession(session);
+        }
+      } else {
+        setSession(null);
+      }
     });
 
     return () => subscription.unsubscribe();
