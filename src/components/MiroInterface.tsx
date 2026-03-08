@@ -13,7 +13,8 @@ const MiroInterface = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [statusText, setStatusText] = useState('Say "MIRO" to start');
+  const [statusText, setStatusText] = useState('Say "MIRO" or type below');
+  const [textInput, setTextInput] = useState("");
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isProcessingRef = useRef(false);
