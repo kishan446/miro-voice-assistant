@@ -10,9 +10,6 @@ const VoiceVisualizer = ({ isActive, label }: VoiceVisualizerProps) => {
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <span className="font-display text-xs tracking-[0.3em] text-primary uppercase text-glow">
-        {label}
-      </span>
       <div className="flex items-center gap-[3px] h-10">
         {Array.from({ length: barCount }).map((_, i) => (
           <motion.div
