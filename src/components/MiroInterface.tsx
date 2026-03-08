@@ -138,6 +138,14 @@ const MiroInterface = () => {
     addMessage("user", query);
 
     try {
+      // Refresh session to handle token expiry after idle periods
+      const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
+      if (sessionError || !sessionData.session) {
+        toast.error("Session expired. Please sign in again.");
+        window.location.href = "/auth";
+        return;
+      }
+
       const recentMessages = messages
         .filter(m => m.content)
         .slice(-6)
@@ -146,7 +154,15 @@ const MiroInterface = () => {
         body: { query, messages: recentMessages },
       });
 
-      if (error) throw error;
+      if (error) {
+        // If unauthorized, redirect to auth
+        if (error.message?.includes("401") || error.message?.includes("Unauthorized")) {
+          toast.error("Session expired. Please sign in again.");
+          window.location.href = "/auth";
+          return;
+        }
+        throw error;
+      }
 
       const responseText = data?.response || "I couldn't process that request.";
       addMessage("assistant", responseText);
