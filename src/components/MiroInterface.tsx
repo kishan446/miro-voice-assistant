@@ -80,14 +80,20 @@ const MiroInterface = () => {
         continue;
       }
 
-      const { data: urlData } = supabase.storage
+      const { data: signedData, error: signErr } = await supabase.storage
         .from("chat-attachments")
-        .getPublicUrl(path);
+        .createSignedUrl(path, 3600);
+
+      if (signErr || !signedData) {
+        console.error("Signed URL error:", signErr);
+        toast.error(`Failed to get URL for ${file.name}`);
+        continue;
+      }
 
       uploaded.push({
         name: file.name,
         type: file.type,
-        url: urlData.publicUrl,
+        url: signedData.signedUrl,
       });
     }
     return uploaded;
