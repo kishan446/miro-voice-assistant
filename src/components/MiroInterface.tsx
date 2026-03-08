@@ -288,6 +288,42 @@ const MiroInterface = () => {
         />
       </motion.div>
 
+      {/* Text input */}
+      <motion.div
+        className="z-10 w-full max-w-lg mb-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+      >
+        <form
+          onSubmit={(e: FormEvent) => {
+            e.preventDefault();
+            if (textInput.trim() && !isProcessing) {
+              setIsAwake(true);
+              processQuery(textInput.trim());
+              setTextInput("");
+            }
+          }}
+          className="flex gap-2"
+        >
+          <input
+            type="text"
+            value={textInput}
+            onChange={(e) => setTextInput(e.target.value)}
+            placeholder="Type a command to MIRO..."
+            disabled={isProcessing}
+            className="flex-1 bg-card/50 backdrop-blur-sm border border-border rounded-lg px-4 py-3 text-foreground font-body text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary border-glow"
+          />
+          <button
+            type="submit"
+            disabled={isProcessing || !textInput.trim()}
+            className="bg-primary/20 hover:bg-primary/30 border border-primary/50 rounded-lg px-4 py-3 text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </form>
+      </motion.div>
+
       {/* Status */}
       <motion.div
         className="z-10 text-center"
@@ -300,7 +336,7 @@ const MiroInterface = () => {
             {statusText}
           </p>
           <p className="font-body text-xs text-muted-foreground mt-1">
-            Then ask me anything
+            Voice or text — ask me anything
           </p>
         </div>
       </motion.div>
