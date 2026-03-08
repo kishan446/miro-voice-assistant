@@ -7,7 +7,7 @@ import phonepeLogo from "@/assets/phonepe-logo.png";
 import paytmLogo from "@/assets/paytm-logo.png";
 
 const UPI_ID = "pkkishan593-1@oksbi";
-const MOBILE_NUMBER = "+91 8310818498";
+const MOBILE_NUMBER = "+91 8660288613";
 const QUICK_AMOUNTS = [50, 100, 200, 500];
 
 // QR code via free API — encodes UPI pay link
