@@ -127,7 +127,7 @@ const MiroInterface = () => {
     const recognition = new SpeechRecognitionAPI();
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.lang = "en-US";
+    recognition.lang = ""; // Accept all languages
     recognitionRef.current = recognition;
 
     setIsListening(true);
