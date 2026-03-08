@@ -138,6 +138,14 @@ const MiroInterface = () => {
     addMessage("user", query);
 
     try {
+      // Refresh session to handle token expiry after idle periods
+      const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
+      if (sessionError || !sessionData.session) {
+        toast.error("Session expired. Please sign in again.");
+        window.location.href = "/auth";
+        return;
+      }
+
       const recentMessages = messages
         .filter(m => m.content)
         .slice(-6)
@@ -146,7 +154,15 @@ const MiroInterface = () => {
         body: { query, messages: recentMessages },
       });
 
-      if (error) throw error;
+      if (error) {
+        // If unauthorized, redirect to auth
+        if (error.message?.includes("401") || error.message?.includes("Unauthorized")) {
+          toast.error("Session expired. Please sign in again.");
+          window.location.href = "/auth";
+          return;
+        }
+        throw error;
+      }
 
       const responseText = data?.response || "I couldn't process that request.";
       addMessage("assistant", responseText);
@@ -236,11 +252,17 @@ const MiroInterface = () => {
       }
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: any) => {
+      // Don't retry if microphone permission is denied
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        console.warn("Microphone permission denied. Use the text input instead.");
+        setStatusText("Mic unavailable — type below");
+        return;
+      }
       if (event.error !== "no-speech" && event.error !== "aborted" && event.error !== "network") {
         console.error("Wake word error:", event.error);
       }
-      setTimeout(() => startWakeWordListening(), 1000);
+      setTimeout(() => startWakeWordListening(), 2000);
     };
 
     recognition.onend = () => {
