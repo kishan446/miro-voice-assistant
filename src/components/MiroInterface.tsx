@@ -40,9 +40,9 @@ const MiroInterface = () => {
     // Auto-detect language and pick the best female voice
     const voices = window.speechSynthesis.getVoices();
     const detectLang = (t: string): string => {
-      if (/[\u0900-\u097F]/.test(t)) return "hi";
+      if (/[\u0C80-\u0CFF]/.test(t)) return "kn"; // Kannada - priority
+      if (/[\u0900-\u097F]/.test(t)) return "hi"; // Hindi - priority
       if (/[\u0B80-\u0BFF]/.test(t)) return "ta";
-      if (/[\u0C80-\u0CFF]/.test(t)) return "kn";
       if (/[\u0C00-\u0C7F]/.test(t)) return "te";
       if (/[\u0980-\u09FF]/.test(t)) return "bn";
       if (/[\u0A80-\u0AFF]/.test(t)) return "gu";
@@ -52,9 +52,6 @@ const MiroInterface = () => {
       if (/[\uAC00-\uD7AF]/.test(t)) return "ko";
       if (/[\u4E00-\u9FFF]/.test(t)) return "zh";
       if (/[\u0600-\u06FF]/.test(t)) return "ar";
-      if (/[àâçéèêëîïôùûüÿæœ]/i.test(t)) return "fr";
-      if (/[äöüß]/i.test(t)) return "de";
-      if (/[ñ¿¡]/i.test(t)) return "es";
       return "en";
     };
     const lang = detectLang(text);
@@ -127,7 +124,7 @@ const MiroInterface = () => {
     const recognition = new SpeechRecognitionAPI();
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.lang = ""; // Accept all languages
+    recognition.lang = "en-IN"; // Default to Indian English, supports multilingual input
     recognitionRef.current = recognition;
 
     setIsListening(true);
