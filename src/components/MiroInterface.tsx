@@ -252,11 +252,17 @@ const MiroInterface = () => {
       }
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: any) => {
+      // Don't retry if microphone permission is denied
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        console.warn("Microphone permission denied. Use the text input instead.");
+        setStatusText("Mic unavailable — type below");
+        return;
+      }
       if (event.error !== "no-speech" && event.error !== "aborted" && event.error !== "network") {
         console.error("Wake word error:", event.error);
       }
-      setTimeout(() => startWakeWordListening(), 1000);
+      setTimeout(() => startWakeWordListening(), 2000);
     };
 
     recognition.onend = () => {
