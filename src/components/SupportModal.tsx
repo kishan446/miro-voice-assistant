@@ -1,12 +1,20 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, X, Copy, Check, Smartphone, ExternalLink } from "lucide-react";
+import { Heart, X, Copy, Check, Smartphone } from "lucide-react";
 import { toast } from "sonner";
+import gpayLogo from "@/assets/gpay-logo.png";
+import phonepeLogo from "@/assets/phonepe-logo.png";
+import paytmLogo from "@/assets/paytm-logo.png";
 
 const UPI_ID = "pkkishan593-1@oksbi";
 const MOBILE_NUMBER = "+91 8310818498";
-
 const QUICK_AMOUNTS = [50, 100, 200, 500];
+
+// QR code via free API — encodes UPI pay link
+const getQRUrl = (amount: number) =>
+  `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+    `upi://pay?pa=${UPI_ID}&pn=MIRO%20AI&am=${amount}&cu=INR&tn=Support%20MIRO`
+  )}`;
 
 interface SupportModalProps {
   open: boolean;
@@ -26,60 +34,30 @@ const SupportModal = ({ open, onClose }: SupportModalProps) => {
   };
 
   const getAmount = () => {
-    if (customAmount) return parseInt(customAmount, 10);
+    if (customAmount) return parseInt(customAmount, 10) || 100;
     return selectedAmount || 100;
   };
 
   const openUPIApp = (app: "gpay" | "phonepe" | "paytm") => {
     const amount = getAmount();
-    const upiBase = `upi://pay?pa=${UPI_ID}&pn=MIRO%20AI&am=${amount}&cu=INR&tn=Support%20MIRO%20Development`;
-
-    // UPI deep links
-    const links: Record<string, string> = {
-      gpay: upiBase,
-      phonepe: upiBase,
-      paytm: upiBase,
-    };
-
-    window.open(links[app], "_blank");
+    const upiLink = `upi://pay?pa=${UPI_ID}&pn=MIRO%20AI&am=${amount}&cu=INR&tn=Support%20MIRO%20Development`;
+    window.open(upiLink, "_blank");
   };
 
-  const handleRazorpay = () => {
+  const handleGenericPay = () => {
     const amount = getAmount();
     if (!amount || amount < 1) {
       toast.error("Please enter a valid amount");
       return;
     }
-
-    const win = window as any;
-    if (!win.Razorpay) {
-      toast.error("Razorpay is loading, please try again");
-      return;
-    }
-
-    const options = {
-      key: "rzp_live_YOUR_KEY_HERE", // placeholder — user must replace
-      amount: amount * 100,
-      currency: "INR",
-      name: "MIRO AI Assistant",
-      description: "Support MIRO Development ❤️",
-      handler: () => {
-        toast.success("Thank you for supporting MIRO ❤️");
-        onClose();
-      },
-      prefill: {},
-      theme: { color: "#ffffff" },
-    };
-
-    const rzp = new win.Razorpay(options);
-    rzp.open();
+    const upiLink = `upi://pay?pa=${UPI_ID}&pn=MIRO%20AI&am=${amount}&cu=INR&tn=Support%20MIRO%20Development`;
+    window.open(upiLink, "_self");
   };
 
   return (
     <AnimatePresence>
       {open && (
         <>
-          {/* Overlay */}
           <motion.div
             className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
             initial={{ opacity: 0 }}
@@ -88,7 +66,6 @@ const SupportModal = ({ open, onClose }: SupportModalProps) => {
             onClick={onClose}
           />
 
-          {/* Modal */}
           <motion.div
             className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
             initial={{ opacity: 0 }}
@@ -112,7 +89,7 @@ const SupportModal = ({ open, onClose }: SupportModalProps) => {
               </button>
 
               {/* Header */}
-              <div className="text-center mb-6">
+              <div className="text-center mb-5">
                 <motion.div
                   animate={{ scale: [1, 1.15, 1] }}
                   transition={{ repeat: Infinity, duration: 2 }}
@@ -129,7 +106,7 @@ const SupportModal = ({ open, onClose }: SupportModalProps) => {
               </div>
 
               {/* Quick amounts */}
-              <div className="mb-5">
+              <div className="mb-4">
                 <p className="text-xs text-muted-foreground mb-2 font-body uppercase tracking-wider">
                   Choose Amount
                 </p>
@@ -164,34 +141,58 @@ const SupportModal = ({ open, onClose }: SupportModalProps) => {
                 />
               </div>
 
-              {/* Razorpay */}
+              {/* Pay with button */}
               <button
-                onClick={handleRazorpay}
+                onClick={handleGenericPay}
                 className="w-full py-3 rounded-xl font-display text-sm font-bold tracking-wider bg-primary text-primary-foreground hover:bg-primary/90 transition-all glow-cyan-strong mb-4"
               >
-                Pay with Razorpay
+                Pay with UPI — ₹{getAmount()}
               </button>
+
+              {/* QR Code */}
+              <div className="flex flex-col items-center mb-4 bg-secondary/60 border border-border rounded-xl p-4">
+                <p className="text-xs text-muted-foreground mb-3 font-body uppercase tracking-wider">
+                  Scan QR to Pay
+                </p>
+                <div className="bg-foreground rounded-xl p-2">
+                  <img
+                    src={getQRUrl(getAmount())}
+                    alt="UPI QR Code"
+                    className="w-40 h-40 rounded-lg"
+                    loading="lazy"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-2 font-body">
+                  ₹{getAmount()} · Any UPI app
+                </p>
+              </div>
 
               {/* Divider */}
               <div className="flex items-center gap-3 mb-4">
                 <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-muted-foreground font-body">OR PAY VIA UPI</span>
+                <span className="text-xs text-muted-foreground font-body">OR PAY VIA APP</span>
                 <div className="flex-1 h-px bg-border" />
               </div>
 
-              {/* UPI Apps */}
+              {/* UPI Apps with real logos */}
               <div className="grid grid-cols-3 gap-2 mb-4">
                 {[
-                  { id: "gpay" as const, label: "Google Pay", color: "from-blue-600 to-green-500" },
-                  { id: "phonepe" as const, label: "PhonePe", color: "from-purple-600 to-indigo-500" },
-                  { id: "paytm" as const, label: "Paytm", color: "from-sky-500 to-blue-600" },
+                  { id: "gpay" as const, label: "Google Pay", logo: gpayLogo },
+                  { id: "phonepe" as const, label: "PhonePe", logo: phonepeLogo },
+                  { id: "paytm" as const, label: "Paytm", logo: paytmLogo },
                 ].map((app) => (
                   <button
                     key={app.id}
                     onClick={() => openUPIApp(app.id)}
-                    className="flex flex-col items-center gap-1 py-3 rounded-xl border border-border bg-secondary hover:border-primary/50 transition-all group"
+                    className="flex flex-col items-center gap-2 py-3 rounded-xl border border-border bg-secondary hover:border-primary/50 transition-all group"
                   >
-                    <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-foreground flex items-center justify-center p-1">
+                      <img
+                        src={app.logo}
+                        alt={app.label}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
                     <span className="text-xs font-body text-muted-foreground group-hover:text-foreground transition-colors">
                       {app.label}
                     </span>
