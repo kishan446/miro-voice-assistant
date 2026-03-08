@@ -1,1 +1,7 @@
 project_id = "areqhioxejjcvtubehwh"
+
+[functions.miro-chat]
+verify_jwt = false
+
+[functions.miro-tts]
+verify_jwt = false
