@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef, useEffect, FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Send, Trash2 } from "lucide-react";
+import { Send, Trash2, Paperclip, X, LogOut, Image } from "lucide-react";
 import MiroOrb from "./MiroOrb";
 import VoiceVisualizer from "./VoiceVisualizer";
-import ChatConsole, { type ChatMessage } from "./ChatConsole";
+import ChatConsole, { type ChatMessage, type ChatAttachment } from "./ChatConsole";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const MiroInterface = () => {
   const [isAwake, setIsAwake] = useState(false);
@@ -15,14 +16,18 @@ const MiroInterface = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [statusText, setStatusText] = useState('Say "MIRO" or type below');
   const [textInput, setTextInput] = useState("");
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isProcessingRef = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
-  const addMessage = useCallback((role: "user" | "assistant", content: string) => {
+  const addMessage = useCallback((role: "user" | "assistant", content: string, attachments?: ChatAttachment[]) => {
     setMessages((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), role, content, timestamp: new Date() },
+      { id: crypto.randomUUID(), role, content, timestamp: new Date(), attachments },
     ]);
   }, []);
 
@@ -31,6 +36,47 @@ const MiroInterface = () => {
     window.speechSynthesis.getVoices();
     window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
   }, []);
+
+  const handleLogout = async () => {
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+    }
+    window.speechSynthesis.cancel();
+    await supabase.auth.signOut();
+    navigate("/auth", { replace: true });
+  };
+
+  const uploadFiles = async (files: File[]): Promise<ChatAttachment[]> => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user?.id;
+    if (!userId) throw new Error("Not authenticated");
+
+    const uploaded: ChatAttachment[] = [];
+    for (const file of files) {
+      const ext = file.name.split(".").pop() || "bin";
+      const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("chat-attachments")
+        .upload(path, file, { contentType: file.type });
+
+      if (error) {
+        console.error("Upload error:", error);
+        toast.error(`Failed to upload ${file.name}`);
+        continue;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("chat-attachments")
+        .getPublicUrl(path);
+
+      uploaded.push({
+        name: file.name,
+        type: file.type,
+        url: urlData.publicUrl,
+      });
+    }
+    return uploaded;
+  };
 
   const speakResponse = useCallback(async (text: string) => {
     setIsSpeaking(true);
@@ -51,32 +97,16 @@ const MiroInterface = () => {
     };
     const lang = detectLang(text);
     
-    // Language-specific voice & settings map
     const langConfig: Record<string, { langCode: string; rate: number; pitch: number; voiceNames: string[] }> = {
-      kn: {
-        langCode: "kn-IN",
-        rate: 0.85,
-        pitch: 1.15,
-        voiceNames: ["Google ಕನ್ನಡ", "Microsoft Sapna", "Sapna", "kn-IN", "kannada"],
-      },
-      hi: {
-        langCode: "hi-IN",
-        rate: 0.88,
-        pitch: 1.2,
-        voiceNames: ["Google हिन्दी", "Microsoft Swara", "Microsoft Kalpana", "Swara", "Kalpana", "Lekha", "hi-IN", "hindi"],
-      },
+      kn: { langCode: "kn-IN", rate: 0.85, pitch: 1.15, voiceNames: ["Google ಕನ್ನಡ", "Microsoft Sapna", "Sapna", "kn-IN", "kannada"] },
+      hi: { langCode: "hi-IN", rate: 0.88, pitch: 1.2, voiceNames: ["Google हिन्दी", "Microsoft Swara", "Microsoft Kalpana", "Swara", "Kalpana", "Lekha", "hi-IN", "hindi"] },
       ta: { langCode: "ta-IN", rate: 0.85, pitch: 1.15, voiceNames: ["Google தமிழ்", "ta-IN", "tamil"] },
       te: { langCode: "te-IN", rate: 0.85, pitch: 1.15, voiceNames: ["Google తెలుగు", "te-IN", "telugu"] },
       bn: { langCode: "bn-IN", rate: 0.85, pitch: 1.15, voiceNames: ["Google বাংলা", "bn-IN", "bengali"] },
       gu: { langCode: "gu-IN", rate: 0.85, pitch: 1.15, voiceNames: ["Google ગુજરાતી", "gu-IN", "gujarati"] },
       pa: { langCode: "pa-IN", rate: 0.85, pitch: 1.15, voiceNames: ["pa-IN", "punjabi"] },
       ml: { langCode: "ml-IN", rate: 0.85, pitch: 1.15, voiceNames: ["Google മലയാളം", "ml-IN", "malayalam"] },
-      en: {
-        langCode: "en-IN",
-        rate: 0.92,
-        pitch: 1.25,
-        voiceNames: ["Microsoft Neerja Online (Natural)", "Microsoft Swara Online (Natural)", "Google UK English Female", "Samantha", "Neerja", "Zira"],
-      },
+      en: { langCode: "en-IN", rate: 0.92, pitch: 1.25, voiceNames: ["Microsoft Neerja Online (Natural)", "Microsoft Swara Online (Natural)", "Google UK English Female", "Samantha", "Neerja", "Zira"] },
     };
     
     const config = langConfig[lang] || langConfig.en;
@@ -87,17 +117,14 @@ const MiroInterface = () => {
     utterance.volume = 1.0;
     utterance.lang = config.langCode;
     
-    // Find the best matching voice
     const voices = window.speechSynthesis.getVoices();
     let bestVoice: SpeechSynthesisVoice | undefined;
     
-    // First: try exact name matches from our priority list
     for (const name of config.voiceNames) {
       bestVoice = voices.find(v => v.name.includes(name));
       if (bestVoice) break;
     }
     
-    // Second: any voice matching the language with "female" or "Natural" in name
     if (!bestVoice) {
       bestVoice = voices.find(v => v.lang === config.langCode && v.name.toLowerCase().includes("natural"))
         || voices.find(v => v.lang === config.langCode && v.name.toLowerCase().includes("female"))
@@ -105,7 +132,6 @@ const MiroInterface = () => {
         || voices.find(v => v.lang.startsWith(lang));
     }
     
-    // Fallback: Indian English female
     if (!bestVoice) {
       bestVoice = voices.find(v => v.lang === "en-IN")
         || voices.find(v => v.name.includes("Google UK English Female"))
@@ -128,14 +154,14 @@ const MiroInterface = () => {
     window.speechSynthesis.speak(utterance);
   }, []);
 
-  const processQuery = useCallback(async (query: string) => {
+  const processQuery = useCallback(async (query: string, attachments?: ChatAttachment[]) => {
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
     setIsProcessing(true);
     setIsListening(false);
     setStatusText("PROCESSING");
 
-    addMessage("user", query);
+    addMessage("user", query, attachments);
 
     try {
       // Refresh session to handle token expiry after idle periods
@@ -150,12 +176,16 @@ const MiroInterface = () => {
         .filter(m => m.content)
         .slice(-6)
         .map(m => ({ role: m.role, content: m.content }));
+
       const { data, error } = await supabase.functions.invoke("miro-chat", {
-        body: { query, messages: recentMessages },
+        body: {
+          query,
+          messages: recentMessages,
+          attachments: attachments?.map(a => ({ type: a.type, url: a.url })),
+        },
       });
 
       if (error) {
-        // If unauthorized, redirect to auth
         if (error.message?.includes("401") || error.message?.includes("Unauthorized")) {
           toast.error("Session expired. Please sign in again.");
           window.location.href = "/auth";
@@ -168,9 +198,16 @@ const MiroInterface = () => {
       addMessage("assistant", responseText);
       setIsProcessing(false);
       await speakResponse(responseText);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Chat error:", e);
-      toast.error("Failed to process your request");
+      const msg = e?.message || "";
+      if (msg.includes("429")) {
+        toast.error("Too many requests. Please wait a moment.");
+      } else if (msg.includes("402")) {
+        toast.error("AI credits exhausted. Please add credits.");
+      } else {
+        toast.error("Failed to process your request");
+      }
       setIsProcessing(false);
       setStatusText('Say "MIRO" for another question');
       startWakeWordListening();
@@ -178,6 +215,57 @@ const MiroInterface = () => {
       isProcessingRef.current = false;
     }
   }, [messages, addMessage, speakResponse]);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    const query = textInput.trim();
+    if (!query && pendingFiles.length === 0) return;
+    if (isProcessing || isUploading) return;
+
+    setIsAwake(true);
+    setTextInput("");
+
+    let attachments: ChatAttachment[] | undefined;
+    if (pendingFiles.length > 0) {
+      setIsUploading(true);
+      try {
+        attachments = await uploadFiles(pendingFiles);
+        setPendingFiles([]);
+      } catch (err) {
+        console.error("Upload error:", err);
+        toast.error("Failed to upload files");
+        setIsUploading(false);
+        return;
+      }
+      setIsUploading(false);
+    }
+
+    const finalQuery = query || (attachments?.length ? "What's in this file?" : "");
+    if (finalQuery) {
+      processQuery(finalQuery, attachments);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    // Validate file sizes (10MB max each)
+    const valid = files.filter(f => {
+      if (f.size > 10 * 1024 * 1024) {
+        toast.error(`${f.name} is too large (max 10MB)`);
+        return false;
+      }
+      return true;
+    });
+
+    setPendingFiles(prev => [...prev, ...valid].slice(0, 5));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removePendingFile = (index: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   const startCommandListening = useCallback(() => {
     if (recognitionRef.current) {
@@ -193,20 +281,20 @@ const MiroInterface = () => {
     const recognition = new SpeechRecognitionAPI();
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.lang = "en-IN"; // Default to Indian English, supports multilingual input
+    recognition.lang = "en-IN";
     recognitionRef.current = recognition;
 
     setIsListening(true);
     setStatusText("LISTENING");
 
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript.trim();
       if (transcript) {
         processQuery(transcript);
       }
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: any) => {
       if (event.error !== "no-speech" && event.error !== "aborted") {
         console.error("Speech error:", event.error);
       }
@@ -239,7 +327,7 @@ const MiroInterface = () => {
     recognition.lang = "en-US";
     recognitionRef.current = recognition;
 
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: any) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript.toLowerCase();
         if (transcript.includes("miro")) {
@@ -253,7 +341,6 @@ const MiroInterface = () => {
     };
 
     recognition.onerror = (event: any) => {
-      // Don't retry if microphone permission is denied
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         console.warn("Microphone permission denied. Use the text input instead.");
         setStatusText("Mic unavailable — type below");
@@ -276,6 +363,7 @@ const MiroInterface = () => {
 
   const handleOrbClick = useCallback(() => {
     if (isSpeaking) {
+      window.speechSynthesis.cancel();
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
@@ -309,9 +397,22 @@ const MiroInterface = () => {
       {/* Radial gradient background */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(187_100%_50%/0.05)_0%,transparent_70%)]" />
 
+      {/* Logout button */}
+      <motion.button
+        onClick={handleLogout}
+        className="absolute top-4 right-4 z-20 flex items-center gap-2 bg-card/50 backdrop-blur-sm border border-border rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors text-sm font-body"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.8 }}
+        title="Sign out"
+      >
+        <LogOut className="w-4 h-4" />
+        <span className="hidden sm:inline">Sign Out</span>
+      </motion.button>
+
       {/* Title */}
       <motion.div
-        className="text-center mb-8 z-10"
+        className="text-center mb-6 z-10"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
@@ -325,13 +426,13 @@ const MiroInterface = () => {
       </motion.div>
 
       {/* Chat console */}
-      <div className="z-10 w-full mb-6">
+      <div className="z-10 w-full mb-4">
         <ChatConsole messages={messages} isProcessing={isProcessing} />
       </div>
 
       {/* Orb */}
       <motion.div
-        className="z-10 mb-8"
+        className="z-10 mb-6"
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6, delay: 0.3 }}
@@ -346,7 +447,7 @@ const MiroInterface = () => {
 
       {/* Visualizer */}
       <motion.div
-        className="z-10 mb-6"
+        className="z-10 mb-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
@@ -357,35 +458,81 @@ const MiroInterface = () => {
         />
       </motion.div>
 
-      {/* Text input */}
+      {/* Pending files preview */}
+      {pendingFiles.length > 0 && (
+        <motion.div
+          className="z-10 w-full max-w-lg mb-2"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex flex-wrap gap-2 px-1">
+            {pendingFiles.map((file, i) => (
+              <div
+                key={i}
+                className="relative group flex items-center gap-2 bg-card/60 backdrop-blur-sm border border-border rounded-lg px-3 py-1.5"
+              >
+                {file.type.startsWith("image/") ? (
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={file.name}
+                    className="w-8 h-8 rounded object-cover"
+                  />
+                ) : (
+                  <span className="text-xs">📎</span>
+                )}
+                <span className="text-xs text-muted-foreground truncate max-w-[100px]">
+                  {file.name}
+                </span>
+                <button
+                  onClick={() => removePendingFile(i)}
+                  className="text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Text input with file upload */}
       <motion.div
         className="z-10 w-full max-w-lg mb-4"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
       >
-        <form
-          onSubmit={(e: FormEvent) => {
-            e.preventDefault();
-            if (textInput.trim() && !isProcessing) {
-              setIsAwake(true);
-              processQuery(textInput.trim());
-              setTextInput("");
-            }
-          }}
-          className="flex gap-2"
-        >
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*,.pdf,.txt,.csv,.json"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isProcessing || isUploading}
+            className="bg-card/50 backdrop-blur-sm border border-border rounded-lg px-3 py-3 text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Attach files or photos"
+          >
+            <Paperclip className="w-4 h-4" />
+          </button>
+
           <input
             type="text"
             value={textInput}
             onChange={(e) => setTextInput(e.target.value)}
-            placeholder="Type a command to MIRO..."
-            disabled={isProcessing}
+            placeholder={isUploading ? "Uploading..." : "Type a command to MIRO..."}
+            disabled={isProcessing || isUploading}
             className="flex-1 bg-card/50 backdrop-blur-sm border border-border rounded-lg px-4 py-3 text-foreground font-body text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary border-glow"
           />
           <button
             type="submit"
-            disabled={isProcessing || !textInput.trim()}
+            disabled={isProcessing || isUploading || (!textInput.trim() && pendingFiles.length === 0)}
             className="bg-primary/20 hover:bg-primary/30 border border-primary/50 rounded-lg px-4 py-3 text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send className="w-4 h-4" />
@@ -402,7 +549,6 @@ const MiroInterface = () => {
           )}
         </form>
       </motion.div>
-
     </div>
   );
 };
