@@ -381,22 +381,6 @@ const MiroInterface = () => {
         </form>
       </motion.div>
 
-      {/* Status */}
-      <motion.div
-        className="z-10 text-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.7 }}
-      >
-        <div className="border border-border rounded-lg px-6 py-3 bg-card/50 backdrop-blur-sm border-glow">
-          <p className="font-display text-xs tracking-widest text-primary text-glow">
-            {statusText}
-          </p>
-          <p className="font-body text-xs text-muted-foreground mt-1">
-            Voice or text — ask me anything
-          </p>
-        </div>
-      </motion.div>
     </div>
   );
 };
