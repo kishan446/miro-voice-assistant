@@ -138,8 +138,12 @@ const MiroInterface = () => {
     addMessage("user", query);
 
     try {
+      const recentMessages = messages
+        .filter(m => m.content)
+        .slice(-6)
+        .map(m => ({ role: m.role, content: m.content }));
       const { data, error } = await supabase.functions.invoke("miro-chat", {
-        body: { query, messages: messages.slice(-10) },
+        body: { query, messages: recentMessages },
       });
 
       if (error) throw error;
