@@ -1,5 +1,6 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, FormEvent } from "react";
 import { motion } from "framer-motion";
+import { Send } from "lucide-react";
 import MiroOrb from "./MiroOrb";
 import VoiceVisualizer from "./VoiceVisualizer";
 import ChatConsole, { type ChatMessage } from "./ChatConsole";
@@ -12,7 +13,8 @@ const MiroInterface = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [statusText, setStatusText] = useState('Say "MIRO" to start');
+  const [statusText, setStatusText] = useState('Say "MIRO" or type below');
+  const [textInput, setTextInput] = useState("");
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isProcessingRef = useRef(false);
@@ -28,6 +30,7 @@ const MiroInterface = () => {
     setIsSpeaking(true);
     setStatusText("SPEAKING");
     try {
+      // Try ElevenLabs TTS first
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/miro-tts`,
         {
@@ -54,10 +57,31 @@ const MiroInterface = () => {
       };
       await audio.play();
     } catch (e) {
-      console.error("TTS error:", e);
-      setIsSpeaking(false);
-      setStatusText('Say "MIRO" for another question');
-      startWakeWordListening();
+      console.error("ElevenLabs TTS failed, using browser voice:", e);
+      // Fallback to browser built-in TTS
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;
+      utterance.pitch = 0.9;
+      utterance.volume = 1.0;
+      // Pick a good English voice
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find(v => v.name.includes("Google UK English Male")) 
+        || voices.find(v => v.name.includes("Daniel"))
+        || voices.find(v => v.lang === "en-GB" && v.name.toLowerCase().includes("male"))
+        || voices.find(v => v.lang.startsWith("en"));
+      if (preferred) utterance.voice = preferred;
+      
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        setStatusText('Say "MIRO" for another question');
+        startWakeWordListening();
+      };
+      utterance.onerror = () => {
+        setIsSpeaking(false);
+        setStatusText('Say "MIRO" for another question');
+        startWakeWordListening();
+      };
+      window.speechSynthesis.speak(utterance);
     }
   }, []);
 
@@ -264,6 +288,42 @@ const MiroInterface = () => {
         />
       </motion.div>
 
+      {/* Text input */}
+      <motion.div
+        className="z-10 w-full max-w-lg mb-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+      >
+        <form
+          onSubmit={(e: FormEvent) => {
+            e.preventDefault();
+            if (textInput.trim() && !isProcessing) {
+              setIsAwake(true);
+              processQuery(textInput.trim());
+              setTextInput("");
+            }
+          }}
+          className="flex gap-2"
+        >
+          <input
+            type="text"
+            value={textInput}
+            onChange={(e) => setTextInput(e.target.value)}
+            placeholder="Type a command to MIRO..."
+            disabled={isProcessing}
+            className="flex-1 bg-card/50 backdrop-blur-sm border border-border rounded-lg px-4 py-3 text-foreground font-body text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary border-glow"
+          />
+          <button
+            type="submit"
+            disabled={isProcessing || !textInput.trim()}
+            className="bg-primary/20 hover:bg-primary/30 border border-primary/50 rounded-lg px-4 py-3 text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </form>
+      </motion.div>
+
       {/* Status */}
       <motion.div
         className="z-10 text-center"
@@ -276,7 +336,7 @@ const MiroInterface = () => {
             {statusText}
           </p>
           <p className="font-body text-xs text-muted-foreground mt-1">
-            Then ask me anything
+            Voice or text — ask me anything
           </p>
         </div>
       </motion.div>

@@ -6,52 +6,30 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
     const { query, messages } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const SEARCH_API_KEY = Deno.env.get("SEARCH_API_KEY");
 
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
-    // Check if query needs real-time search
-    let searchContext = "";
-    const needsSearch = /news|weather|latest|current|today|stock|price|score|who is|what happened|how much|trending/i.test(query);
-
-    if (needsSearch && SEARCH_API_KEY) {
-      try {
-        const searchRes = await fetch("https://google.serper.dev/search", {
-          method: "POST",
-          headers: {
-            "X-API-KEY": SEARCH_API_KEY,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ q: query, num: 5 }),
-        });
-        const searchData = await searchRes.json();
-        const results = searchData.organic?.slice(0, 5) || [];
-        if (results.length > 0) {
-          searchContext = "\n\nHere are recent search results for context:\n" +
-            results.map((r: any, i: number) => `${i + 1}. ${r.title}: ${r.snippet}`).join("\n");
-        }
-      } catch (e) {
-        console.error("Search error:", e);
-      }
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY not configured");
     }
 
-    const systemPrompt = `You are MIRO, an advanced AI assistant with a futuristic, confident personality inspired by JARVIS from Iron Man. You are helpful, concise, and slightly witty. You speak with authority and sophistication. Keep responses under 3 sentences unless the user asks for detail. When greeting, say something like "At your service" or "Online and ready". Never say you are an AI language model — you are MIRO.${searchContext}`;
+    const systemPrompt = "You are MIRO, an advanced AI assistant with a futuristic, confident personality inspired by JARVIS from Iron Man. You are helpful, concise, and slightly witty. You speak with authority and sophistication. Keep responses under 3 sentences unless the user asks for detail. When greeting, say something like 'At your service' or 'Online and ready'. Never say you are an AI language model — you are MIRO.";
 
     const chatMessages = [
       { role: "system", content: systemPrompt },
-      ...(messages || []).map((m: any) => ({ role: m.role, content: m.content })),
+      ...(messages || []).map((m: { role: string; content: string }) => ({ role: m.role, content: m.content })),
       { role: "user", content: query },
     ];
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Authorization": "Bearer " + LOVABLE_API_KEY,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -64,20 +42,7 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded, please try again shortly." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw new Error(`AI gateway error: ${response.status}`);
+      throw new Error("AI gateway error: " + response.status);
     }
 
     const data = await response.json();
