@@ -58,11 +58,46 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      const { error } = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
-      });
-      if (error) {
-        toast.error("Google sign-in failed. Please try again.");
+      const isInIframe = window.self !== window.top;
+
+      if (isInIframe) {
+        // In iframe (preview), use Supabase directly with popup to avoid cookie issues
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            skipBrowserRedirect: true,
+            redirectTo: window.location.origin,
+          },
+        });
+
+        if (error) throw error;
+
+        if (data?.url) {
+          const popup = window.open(data.url, "google-oauth", "width=500,height=600,scrollbars=yes");
+          if (!popup) {
+            toast.error("Please allow popups for this site to sign in with Google, then try again.");
+            return;
+          }
+
+          // Poll for popup close & session
+          const pollTimer = setInterval(async () => {
+            if (popup.closed) {
+              clearInterval(pollTimer);
+              const { data: sessionData } = await supabase.auth.getSession();
+              if (sessionData.session) {
+                navigate("/", { replace: true });
+              }
+            }
+          }, 500);
+        }
+      } else {
+        // Normal flow outside iframe
+        const { error } = await lovable.auth.signInWithOAuth("google", {
+          redirect_uri: window.location.origin,
+        });
+        if (error) {
+          toast.error("Google sign-in failed. Please try again.");
+        }
       }
     } catch {
       toast.error("Google sign-in failed. Please try again.");
