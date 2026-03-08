@@ -6,48 +6,48 @@
 
 @layer base {
   :root {
-    --background: 230 50% 3%;
-    --foreground: 190 80% 85%;
+    --background: 0 0% 2%;
+    --foreground: 0 0% 90%;
 
-    --card: 230 40% 6%;
-    --card-foreground: 190 80% 85%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 90%;
 
-    --popover: 230 40% 6%;
-    --popover-foreground: 190 80% 85%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 90%;
 
-    --primary: 187 100% 45%;
-    --primary-foreground: 230 50% 3%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
 
-    --secondary: 230 30% 12%;
-    --secondary-foreground: 190 80% 85%;
+    --secondary: 0 0% 8%;
+    --secondary-foreground: 0 0% 85%;
 
-    --muted: 230 25% 10%;
-    --muted-foreground: 200 20% 50%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 187 100% 55%;
-    --accent-foreground: 230 50% 3%;
+    --accent: 0 0% 100%;
+    --accent-foreground: 0 0% 0%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 200 40% 15%;
-    --input: 200 40% 15%;
-    --ring: 187 100% 45%;
+    --border: 0 0% 12%;
+    --input: 0 0% 12%;
+    --ring: 0 0% 100%;
 
     --radius: 0.75rem;
 
-    --cyan-glow: 187 100% 50%;
-    --cyan-dim: 187 60% 25%;
-    --dark-surface: 230 40% 5%;
+    --cyan-glow: 0 0% 100%;
+    --cyan-dim: 0 0% 25%;
+    --dark-surface: 0 0% 3%;
 
-    --sidebar-background: 230 40% 5%;
-    --sidebar-foreground: 190 80% 85%;
-    --sidebar-primary: 187 100% 45%;
-    --sidebar-primary-foreground: 230 50% 3%;
-    --sidebar-accent: 230 30% 12%;
-    --sidebar-accent-foreground: 190 80% 85%;
-    --sidebar-border: 200 40% 15%;
-    --sidebar-ring: 187 100% 45%;
+    --sidebar-background: 0 0% 3%;
+    --sidebar-foreground: 0 0% 85%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 8%;
+    --sidebar-accent-foreground: 0 0% 85%;
+    --sidebar-border: 0 0% 12%;
+    --sidebar-ring: 0 0% 100%;
 
     --font-display: 'Orbitron', monospace;
     --font-body: 'Rajdhani', sans-serif;
