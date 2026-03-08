@@ -17,7 +17,7 @@ const VoiceVisualizer = ({ isActive, label }: VoiceVisualizerProps) => {
         {Array.from({ length: barCount }).map((_, i) => (
           <motion.div
             key={i}
-            className="w-[3px] rounded-full bg-primary-foreground"
+            className="w-[3px] rounded-full bg-primary-foreground border border-primary/20 shadow-[0_0_6px_hsl(var(--primary)/0.3)]"
             animate={
               isActive
                 ? {
