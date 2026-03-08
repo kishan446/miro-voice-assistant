@@ -7,7 +7,7 @@ import phonepeLogo from "@/assets/phonepe-logo.png";
 import paytmLogo from "@/assets/paytm-logo.png";
 
 const UPI_ID = "pkkishan593-1@oksbi";
-const MOBILE_NUMBER = "+91 8310818498";
+const MOBILE_NUMBER = "+91 8660288613";
 const QUICK_AMOUNTS = [50, 100, 200, 500];
 
 // QR code via free API — encodes UPI pay link
@@ -184,16 +184,16 @@ const SupportModal = ({ open, onClose }: SupportModalProps) => {
                   <button
                     key={app.id}
                     onClick={() => openUPIApp(app.id)}
-                    className="flex flex-col items-center gap-2 py-3 rounded-xl border border-border bg-secondary hover:border-primary/50 transition-all group"
+                    className="flex flex-col items-center gap-2 py-4 rounded-xl border border-border bg-secondary hover:border-primary/50 transition-all group"
                   >
-                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-foreground flex items-center justify-center p-1">
+                    <div className="w-14 h-14 rounded-xl overflow-hidden bg-foreground flex items-center justify-center p-1.5">
                       <img
                         src={app.logo}
                         alt={app.label}
                         className="w-full h-full object-contain"
                       />
                     </div>
-                    <span className="text-xs font-body text-muted-foreground group-hover:text-foreground transition-colors">
+                    <span className="text-xs font-body font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
                       {app.label}
                     </span>
                   </button>
