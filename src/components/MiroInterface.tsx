@@ -37,21 +37,37 @@ const MiroInterface = () => {
     utterance.pitch = 1.3;
     utterance.volume = 1.0;
     
-    // Pick the best female voice available
+    // Auto-detect language and pick the best female voice
     const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => v.name === "Microsoft Zira - English (United States)")
-      || voices.find(v => v.name === "Microsoft Swara Online (Natural) - English (India)")
-      || voices.find(v => v.name === "Microsoft Neerja Online (Natural) - English (India)")
+    const detectLang = (t: string): string => {
+      if (/[\u0900-\u097F]/.test(t)) return "hi";
+      if (/[\u0B80-\u0BFF]/.test(t)) return "ta";
+      if (/[\u0C80-\u0CFF]/.test(t)) return "kn";
+      if (/[\u0C00-\u0C7F]/.test(t)) return "te";
+      if (/[\u0980-\u09FF]/.test(t)) return "bn";
+      if (/[\u0A80-\u0AFF]/.test(t)) return "gu";
+      if (/[\u0A00-\u0A7F]/.test(t)) return "pa";
+      if (/[\u0D00-\u0D7F]/.test(t)) return "ml";
+      if (/[\u3040-\u309F\u30A0-\u30FF]/.test(t)) return "ja";
+      if (/[\uAC00-\uD7AF]/.test(t)) return "ko";
+      if (/[\u4E00-\u9FFF]/.test(t)) return "zh";
+      if (/[\u0600-\u06FF]/.test(t)) return "ar";
+      if (/[àâçéèêëîïôùûüÿæœ]/i.test(t)) return "fr";
+      if (/[äöüß]/i.test(t)) return "de";
+      if (/[ñ¿¡]/i.test(t)) return "es";
+      return "en";
+    };
+    const lang = detectLang(text);
+    utterance.lang = lang;
+    
+    // Find best female voice for detected language
+    const langVoice = voices.find(v => v.lang.startsWith(lang) && v.name.toLowerCase().includes("female"))
+      || voices.find(v => v.lang.startsWith(lang))
       || voices.find(v => v.name.includes("Google UK English Female"))
       || voices.find(v => v.name === "Samantha")
-      || voices.find(v => v.name.includes("Zira"))
-      || voices.find(v => v.name.includes("Swara"))
-      || voices.find(v => v.name.includes("Neerja"))
-      || voices.find(v => v.lang === "en-IN" && v.name.toLowerCase().includes("female"))
-      || voices.find(v => v.lang === "en-IN")
       || voices.find(v => v.name.toLowerCase().includes("female") && v.lang.startsWith("en"))
       || voices.find(v => v.lang.startsWith("en"));
-    if (preferred) utterance.voice = preferred;
+    if (langVoice) utterance.voice = langVoice;
     
     utterance.onend = () => {
       setIsSpeaking(false);
