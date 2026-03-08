@@ -213,7 +213,7 @@ const SupportModal = ({ open, onClose }: SupportModalProps) => {
                     className="p-2 rounded-lg border border-border hover:border-primary/50 text-muted-foreground hover:text-foreground transition-all"
                     title="Copy UPI ID"
                   >
-                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                    {copied ? <Check className="w-4 h-4 text-primary" /> : <Copy className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
