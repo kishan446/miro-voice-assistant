@@ -33,19 +33,22 @@ const MiroInterface = () => {
     // Use browser built-in TTS
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
-    utterance.pitch = 1.2;
+    utterance.rate = 0.92;
+    utterance.pitch = 1.3;
     utterance.volume = 1.0;
     
-    // Pick a beautiful Indian-accent female voice
+    // Pick the best female voice available
     const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => v.name.includes("Google हिन्दी"))
-      || voices.find(v => v.name.toLowerCase().includes("veena"))
-      || voices.find(v => v.name.toLowerCase().includes("lekha"))
+    const preferred = voices.find(v => v.name === "Microsoft Zira - English (United States)")
+      || voices.find(v => v.name === "Microsoft Swara Online (Natural) - English (India)")
+      || voices.find(v => v.name === "Microsoft Neerja Online (Natural) - English (India)")
+      || voices.find(v => v.name.includes("Google UK English Female"))
+      || voices.find(v => v.name === "Samantha")
+      || voices.find(v => v.name.includes("Zira"))
+      || voices.find(v => v.name.includes("Swara"))
+      || voices.find(v => v.name.includes("Neerja"))
       || voices.find(v => v.lang === "en-IN" && v.name.toLowerCase().includes("female"))
       || voices.find(v => v.lang === "en-IN")
-      || voices.find(v => v.name.includes("Google UK English Female"))
-      || voices.find(v => v.name.includes("Samantha"))
       || voices.find(v => v.name.toLowerCase().includes("female") && v.lang.startsWith("en"))
       || voices.find(v => v.lang.startsWith("en"));
     if (preferred) utterance.voice = preferred;
