@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Send, Trash2, Paperclip, X, LogOut, Image } from "lucide-react";
+import { Send, Trash2, Paperclip, X, LogOut, Image, Heart } from "lucide-react";
+import SupportModal from "./SupportModal";
 import MiroOrb from "./MiroOrb";
 import VoiceVisualizer from "./VoiceVisualizer";
 import ChatConsole, { type ChatMessage, type ChatAttachment } from "./ChatConsole";
