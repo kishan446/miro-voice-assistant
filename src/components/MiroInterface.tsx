@@ -180,11 +180,15 @@ const MiroInterface = () => {
 
     try {
       // Refresh session to handle token expiry after idle periods
-      const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
+      let { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
       if (sessionError || !sessionData.session) {
-        toast.error("Session expired. Please sign in again.");
-        window.location.href = "/auth";
-        return;
+        // Retry once - getSession may recover from localStorage
+        const { data: retryData } = await supabase.auth.getSession();
+        if (!retryData.session) {
+          toast.error("Session expired. Please sign in again.");
+          navigate("/auth", { replace: true });
+          return;
+        }
       }
 
       const recentMessages = messages
