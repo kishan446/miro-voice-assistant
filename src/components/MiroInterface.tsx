@@ -29,59 +29,33 @@ const MiroInterface = () => {
   const speakResponse = useCallback(async (text: string) => {
     setIsSpeaking(true);
     setStatusText("SPEAKING");
-    try {
-      // Try ElevenLabs TTS first
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/miro-tts`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ text }),
-        }
-      );
-
-      if (!response.ok) throw new Error("TTS failed");
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-      audio.onended = () => {
-        setIsSpeaking(false);
-        setStatusText('Say "MIRO" for another question');
-        URL.revokeObjectURL(audioUrl);
-        startWakeWordListening();
-      };
-      await audio.play();
-    } catch (e) {
-      console.error("ElevenLabs TTS failed, using browser voice:", e);
-      // Fallback to browser built-in TTS
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.0;
-      utterance.pitch = 0.9;
-      utterance.volume = 1.0;
-      // Pick a good English voice
-      const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find(v => v.name.includes("Google UK English Male")) 
-        || voices.find(v => v.name.includes("Daniel"))
-        || voices.find(v => v.lang === "en-GB" && v.name.toLowerCase().includes("male"))
-        || voices.find(v => v.lang.startsWith("en"));
-      if (preferred) utterance.voice = preferred;
-      
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        setStatusText('Say "MIRO" for another question');
-        startWakeWordListening();
-      };
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-        setStatusText('Say "MIRO" for another question');
-        startWakeWordListening();
-      };
-      window.speechSynthesis.speak(utterance);
+    
+    // Use browser built-in TTS
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.pitch = 0.9;
+    utterance.volume = 1.0;
+    
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.name.includes("Google UK English Male")) 
+      || voices.find(v => v.name.includes("Daniel"))
+      || voices.find(v => v.lang === "en-GB" && v.name.toLowerCase().includes("male"))
+      || voices.find(v => v.lang.startsWith("en"));
+    if (preferred) utterance.voice = preferred;
+    
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setStatusText('Say "MIRO" or type below');
+      startWakeWordListening();
+    };
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setStatusText('Say "MIRO" or type below');
+      startWakeWordListening();
+    };
+    window.speechSynthesis.speak(utterance);
+  }, []);
     }
   }, []);
 
