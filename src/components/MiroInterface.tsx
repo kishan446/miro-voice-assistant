@@ -24,6 +24,7 @@ const MiroInterface = () => {
   const isProcessingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const [supportOpen, setSupportOpen] = useState(false);
 
   const addMessage = useCallback((role: "user" | "assistant", content: string, attachments?: ChatAttachment[]) => {
     setMessages((prev) => [
