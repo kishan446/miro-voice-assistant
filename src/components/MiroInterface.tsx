@@ -600,8 +600,24 @@ const MiroInterface = () => {
               <Trash2 className="w-4 h-4" />
             </button>
           )}
-        </form>
+      </form>
       </motion.div>
+
+      {/* Support / Donate floating button */}
+      <motion.button
+        onClick={() => setSupportOpen(true)}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 bg-card/80 backdrop-blur-sm border border-border rounded-full px-4 py-3 text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all group glow-cyan"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.2 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        <Heart className="w-4 h-4 text-destructive group-hover:fill-destructive transition-all" />
+        <span className="text-sm font-body font-semibold">Support MIRO</span>
+      </motion.button>
+
+      <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
     </div>
   );
 };
