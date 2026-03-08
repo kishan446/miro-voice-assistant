@@ -93,10 +93,17 @@ ABSOLUTE RULES:
 10. When documents/files are shared, acknowledge them and help with their content.`;
 
     // Build the user message content - support multimodal (text + images)
-    const safeAttachments = Array.isArray(attachments) ? attachments.slice(0, 5) : [];
-    const imageAttachments = safeAttachments.filter(
-      (a: { type: string; url: string }) => a.type?.startsWith("image/")
-    );
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const storageOrigin = new URL(SUPABASE_URL).origin;
+
+    const imageAttachments = Array.isArray(attachments)
+      ? attachments.slice(0, 5).filter((a: { type: string; url: string }) => {
+          try {
+            const u = new URL(a.url);
+            return u.origin === storageOrigin && a.type?.startsWith("image/");
+          } catch { return false; }
+        })
+      : [];
 
     let userContent: any;
     if (imageAttachments.length > 0) {
