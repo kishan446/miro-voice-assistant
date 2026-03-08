@@ -97,8 +97,8 @@ const MiroInterface = () => {
       try { recognitionRef.current.stop(); } catch {}
     }
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
+    const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) {
       toast.error("Speech recognition not supported in this browser");
       return;
     }
