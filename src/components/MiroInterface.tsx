@@ -37,6 +37,21 @@ const MiroInterface = () => {
     window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
   }, []);
 
+  // Keep session alive with periodic refresh every 10 minutes
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const { error } = await supabase.auth.refreshSession();
+        if (error) {
+          console.warn("Session refresh failed:", error.message);
+        }
+      } catch (e) {
+        console.warn("Session refresh error:", e);
+      }
+    }, 10 * 60 * 1000); // every 10 minutes
+    return () => clearInterval(interval);
+  }, []);
+
   const handleLogout = async () => {
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch {}
@@ -165,11 +180,15 @@ const MiroInterface = () => {
 
     try {
       // Refresh session to handle token expiry after idle periods
-      const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
+      let { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
       if (sessionError || !sessionData.session) {
-        toast.error("Session expired. Please sign in again.");
-        window.location.href = "/auth";
-        return;
+        // Retry once - getSession may recover from localStorage
+        const { data: retryData } = await supabase.auth.getSession();
+        if (!retryData.session) {
+          toast.error("Session expired. Please sign in again.");
+          navigate("/auth", { replace: true });
+          return;
+        }
       }
 
       const recentMessages = messages
