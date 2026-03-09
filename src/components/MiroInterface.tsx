@@ -553,15 +553,6 @@ const MiroInterface = () => {
         />
       </motion.div>
 
-      {/* Status */}
-      <motion.p
-        className="z-10 mb-2 text-sm font-body text-muted-foreground"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-      >
-        {statusText}
-      </motion.p>
 
       {/* Visualizer */}
       <motion.div
