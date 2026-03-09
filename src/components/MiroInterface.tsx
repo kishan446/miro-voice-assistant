@@ -572,7 +572,7 @@ const MiroInterface = () => {
       >
         <VoiceVisualizer
           isActive={isListening || isSpeaking}
-          label={isListening ? "LISTENING" : isSpeaking ? "SPEAKING" : "STANDBY"}
+          label={isListening ? "LISTENING" : isSpeaking ? "SPEAKING" : "LISTENING"}
         />
       </motion.div>
 
