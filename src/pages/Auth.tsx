@@ -64,7 +64,7 @@ const Auth = () => {
       } else if (error.message?.includes("Failed to fetch")) {
         toast.error("Network error. Please check your connection and try again.");
       } else {
-        toast.error(error.message || "Something went wrong. Please try again.");
+        toast.error("Something went wrong. Please try again.");
       }
     } finally {
       setLoading(false);
