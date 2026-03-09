@@ -169,8 +169,6 @@ const MiroInterface = () => {
 
     setTimeout(() => {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.95;
-      utterance.pitch = 1.05;
       utterance.volume = 1.0;
 
       // Detect language from script
@@ -187,16 +185,58 @@ const MiroInterface = () => {
       };
       utterance.lang = detectLang(text);
 
-      // Pick best available voice
+      // Pick the best Indian female voice — prioritize soft, natural-sounding ones
       const voices = window.speechSynthesis.getVoices();
-      let voice = voices.find(v => v.lang === utterance.lang && v.name.toLowerCase().includes("female"))
-        || voices.find(v => v.lang === utterance.lang && v.name.toLowerCase().includes("natural"))
-        || voices.find(v => v.lang === utterance.lang)
-        || voices.find(v => v.lang.startsWith(utterance.lang.split("-")[0]))
-        || voices.find(v => v.lang === "en-IN")
-        || voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("female"))
-        || voices.find(v => v.lang.startsWith("en"));
-      if (voice) utterance.voice = voice;
+      const lang = utterance.lang;
+      const langPrefix = lang.split("-")[0];
+
+      // Preferred Indian female voice names (Chrome/Edge/Android typically have these)
+      const preferredNames = [
+        "google हिन्दी", "google hindi", "google kannada", "google ಕನ್ನಡ",
+        "aditi", "priya", "neerja", "raveena", "lekha",
+        "microsoft swara", "microsoft hemant",
+      ];
+
+      const pickVoice = (): SpeechSynthesisVoice | undefined => {
+        // 1. Exact lang match + preferred name (best quality Indian female)
+        for (const name of preferredNames) {
+          const v = voices.find(v => v.lang === lang && v.name.toLowerCase().includes(name));
+          if (v) return v;
+        }
+        // 2. Exact lang match + female keyword
+        const femaleExact = voices.find(v => v.lang === lang && /female|woman|girl/i.test(v.name));
+        if (femaleExact) return femaleExact;
+        // 3. Exact lang match + natural/premium keyword
+        const naturalExact = voices.find(v => v.lang === lang && /natural|premium|enhanced|neural/i.test(v.name));
+        if (naturalExact) return naturalExact;
+        // 4. Exact lang match (any)
+        const anyExact = voices.find(v => v.lang === lang);
+        if (anyExact) return anyExact;
+        // 5. Same language prefix
+        const prefixMatch = voices.find(v => v.lang.startsWith(langPrefix));
+        if (prefixMatch) return prefixMatch;
+        // 6. Fallback to en-IN female
+        const enInFemale = voices.find(v => v.lang === "en-IN" && /female|woman/i.test(v.name));
+        if (enInFemale) return enInFemale;
+        // 7. Any en-IN
+        const enIn = voices.find(v => v.lang === "en-IN");
+        if (enIn) return enIn;
+        // 8. Any English female
+        const enFemale = voices.find(v => v.lang.startsWith("en") && /female|woman/i.test(v.name));
+        if (enFemale) return enFemale;
+        // 9. Any English
+        return voices.find(v => v.lang.startsWith("en"));
+      };
+
+      const selectedVoice = pickVoice();
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+        console.log("[MIRO] Voice selected:", selectedVoice.name, selectedVoice.lang);
+      }
+
+      // Tune for a warm, feminine Indian sound
+      utterance.rate = 0.92;   // Slightly slower for warmth
+      utterance.pitch = 1.15;  // Higher pitch for feminine tone
 
       const onDone = () => {
         setIsSpeaking(false);
@@ -221,7 +261,7 @@ const MiroInterface = () => {
 
       utterance.onend = () => { clearInterval(keepAlive); onDone(); };
       utterance.onerror = () => { clearInterval(keepAlive); onDone(); };
-    }, 150);
+    }, 100);
   }
 
   async function processQuery(query: string, attachments?: ChatAttachment[]) {
