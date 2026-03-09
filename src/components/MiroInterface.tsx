@@ -235,6 +235,7 @@ const MiroInterface = () => {
     addMessage("user", query, attachments);
 
     try {
+      // Refresh session before API call
       try { await supabase.auth.refreshSession(); } catch {}
 
       const recentMessages = messagesRef.current
@@ -245,8 +246,14 @@ const MiroInterface = () => {
       let lastError: any = null;
       let data: any = null;
 
-      for (let attempt = 0; attempt < 2; attempt++) {
+      for (let attempt = 0; attempt < 3; attempt++) {
         try {
+          console.log(`[MIRO] Calling miro-chat (attempt ${attempt + 1})...`);
+          
+          // Create abort controller for timeout
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+          
           const result = await supabase.functions.invoke("miro-chat", {
             body: {
               query,
@@ -254,8 +261,11 @@ const MiroInterface = () => {
               attachments: attachments?.map(a => ({ type: a.type, url: a.url })),
             },
           });
+          
+          clearTimeout(timeoutId);
 
           if (result.error) {
+            console.error("[MIRO] API error:", result.error);
             if (result.error.message?.includes("401") || result.error.message?.includes("Unauthorized")) {
               const { data: sessionData } = await supabase.auth.getSession();
               if (!sessionData.session) {
@@ -269,10 +279,12 @@ const MiroInterface = () => {
           }
 
           data = result.data;
+          console.log("[MIRO] Got response:", data?.response?.slice(0, 100));
           break;
-        } catch (err) {
+        } catch (err: any) {
           lastError = err;
-          if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+          console.warn(`[MIRO] Attempt ${attempt + 1} failed:`, err?.message || err);
+          if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
         }
       }
 
