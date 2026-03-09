@@ -4,6 +4,7 @@ import { Send, Trash2, Paperclip, X, LogOut, Heart } from "lucide-react";
 import SupportModal from "./SupportModal";
 import MiroOrb from "./MiroOrb";
 import VoiceVisualizer from "./VoiceVisualizer";
+import MicStatusIndicator from "./MicStatusIndicator";
 import ChatConsole, { type ChatMessage, type ChatAttachment } from "./ChatConsole";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
