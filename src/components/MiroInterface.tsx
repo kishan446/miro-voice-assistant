@@ -379,32 +379,47 @@ const MiroInterface = () => {
 
   // Handle orb click — USER GESTURE that enables mic
   const handleOrbClick = async () => {
+    console.log("[MIRO] Orb clicked. voiceEnabled:", voiceEnabledRef.current, "isSpeaking:", isSpeakingRef.current);
+    
     // Stop any current speech
     if (isSpeakingRef.current) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
+      isSpeakingRef.current = false;
     }
 
-    // Request mic permission on first click
+    // Check if SpeechRecognition is available
+    const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) {
+      toast.error("Speech recognition is not supported in this browser. Please use Chrome.");
+      setStatusText("Voice not supported — use text input");
+      return;
+    }
+
+    // Request mic permission on first click (MUST be in direct user gesture)
     if (!voiceEnabledRef.current) {
       try {
+        console.log("[MIRO] Requesting microphone permission...");
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true },
         });
         stream.getTracks().forEach(track => track.stop());
         setVoiceEnabled(true);
         voiceEnabledRef.current = true;
-        toast.success("Microphone enabled!");
-      } catch (err) {
-        console.warn("Mic denied:", err);
-        toast.error("Microphone access denied. Use text input instead.");
-        setStatusText("Mic blocked — type below");
+        console.log("[MIRO] Microphone permission granted!");
+        toast.success("Microphone enabled! Speak now.");
+      } catch (err: any) {
+        console.error("[MIRO] Mic permission error:", err?.name, err?.message);
+        toast.error("Microphone access denied. Please allow mic access and try again.");
+        setStatusText("Mic blocked — allow mic in browser settings");
         return;
       }
     }
 
     setIsAwake(true);
-    startCommandListening();
+    setStatusText("Starting speech recognition...");
+    // Small delay to ensure UI updates before starting recognition
+    setTimeout(() => startCommandListening(), 100);
   };
 
   const handleSubmit = async (e: FormEvent) => {
