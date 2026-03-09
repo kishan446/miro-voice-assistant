@@ -538,20 +538,6 @@ const MiroInterface = () => {
         />
       </motion.div>
 
-      {/* Mic Status Indicator */}
-      <motion.div
-        className="z-10 mb-2"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.35 }}
-      >
-        <MicStatusIndicator
-          voiceEnabled={voiceEnabled}
-          isListening={isListening}
-          isSpeaking={isSpeaking}
-          isProcessing={isProcessing}
-        />
-      </motion.div>
 
 
       {/* Visualizer */}
