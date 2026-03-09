@@ -59,7 +59,11 @@ const MiroInterface = () => {
       try { recognitionRef.current.stop(); } catch {}
     }
     window.speechSynthesis.cancel();
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (e) {
+      console.warn("Sign out error:", e);
+    }
     navigate("/auth", { replace: true });
   };
 
