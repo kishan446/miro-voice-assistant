@@ -13,12 +13,10 @@ const Auth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Listen for auth changes FIRST (catches in-flight OAuth redirects)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) navigate("/", { replace: true });
     });
 
-    // Then check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) navigate("/", { replace: true });
     });
@@ -36,13 +34,7 @@ const Auth = () => {
         if (error) throw error;
         toast.success("Signed in successfully!");
       } else {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
-        });
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
         if (data.session) {
           toast.success("Account created! You're signed in.");
@@ -55,15 +47,15 @@ const Auth = () => {
         }
       }
     } catch (error: any) {
-      console.error("Auth error:", error.message);
-      if (error.message?.includes("Email not confirmed")) {
+      const msg = error.message || "";
+      if (msg.includes("Email not confirmed")) {
         toast.error("Email not verified. Please check your inbox.");
-      } else if (error.message?.includes("Invalid login credentials")) {
+      } else if (msg.includes("Invalid login credentials")) {
         toast.error("Invalid email or password.");
-      } else if (error.message?.includes("User already registered")) {
+      } else if (msg.includes("User already registered")) {
         toast.error("Account already exists. Try signing in.");
         setIsLogin(true);
-      } else if (error.message?.includes("Failed to fetch")) {
+      } else if (msg.includes("Failed to fetch")) {
         toast.error("Network error. Please check your connection and try again.");
       } else {
         toast.error("Something went wrong. Please try again.");
@@ -73,37 +65,19 @@ const Auth = () => {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleOAuthSignIn = async (provider: "google" | "apple") => {
     setLoading(true);
     try {
-      const { error } = await lovable.auth.signInWithOAuth("google", {
+      const { error } = await lovable.auth.signInWithOAuth(provider, {
         redirect_uri: `${window.location.origin}/auth/callback`,
       });
       if (error) {
-        console.error("Google auth error:", error);
-        toast.error("Google sign-in failed. Please try again.");
+        console.error(`${provider} auth error:`, error);
+        toast.error(`${provider === "google" ? "Google" : "Apple"} sign-in failed. Please try again.`);
       }
     } catch (err) {
-      console.error("Google auth exception:", err);
-      toast.error("Google sign-in failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    setLoading(true);
-    try {
-      const { error } = await lovable.auth.signInWithOAuth("apple", {
-        redirect_uri: `${window.location.origin}/auth/callback`,
-      });
-      if (error) {
-        console.error("Apple auth error:", error);
-        toast.error("Apple sign-in failed. Please try again.");
-      }
-    } catch (err) {
-      console.error("Apple auth exception:", err);
-      toast.error("Apple sign-in failed. Please try again.");
+      console.error(`${provider} auth exception:`, err);
+      toast.error(`${provider === "google" ? "Google" : "Apple"} sign-in failed. Please try again.`);
     } finally {
       setLoading(false);
     }
@@ -134,7 +108,7 @@ const Auth = () => {
 
         <button
           type="button"
-          onClick={handleGoogleSignIn}
+          onClick={() => handleOAuthSignIn("google")}
           disabled={loading}
           className="w-full flex items-center justify-center gap-3 bg-card/50 backdrop-blur-sm border border-border rounded-lg px-4 py-3 text-foreground font-body text-sm transition-colors hover:bg-card/80 disabled:opacity-50 mb-3"
         >
@@ -149,7 +123,7 @@ const Auth = () => {
 
         <button
           type="button"
-          onClick={handleAppleSignIn}
+          onClick={() => handleOAuthSignIn("apple")}
           disabled={loading}
           className="w-full flex items-center justify-center gap-3 bg-card/50 backdrop-blur-sm border border-border rounded-lg px-4 py-3 text-foreground font-body text-sm transition-colors hover:bg-card/80 disabled:opacity-50 mb-4"
         >
