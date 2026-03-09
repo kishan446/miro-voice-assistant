@@ -310,7 +310,7 @@ const MiroInterface = () => {
 
     const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognitionAPI) {
-      toast.error("Speech recognition not supported");
+      toast.error("Speech recognition not supported in this browser");
       return;
     }
 
@@ -318,49 +318,59 @@ const MiroInterface = () => {
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.lang = "en-IN";
-    recognition.maxAlternatives = 1;
+    recognition.maxAlternatives = 3;
     recognitionRef.current = recognition;
+
+    let gotResult = false;
 
     setIsListening(true);
     setStatusText("🎤 LISTENING — Speak now...");
 
     recognition.onresult = (event: any) => {
+      gotResult = true;
       const transcript = event.results[0]?.[0]?.transcript?.trim();
-      if (transcript) {
-        // Filter out wake word only transcripts
-        const cleaned = transcript.toLowerCase().replace(/miro|mirror|hero|meeru/gi, "").trim();
-        const finalQuery = cleaned.length > 1 ? transcript : transcript;
+      console.log("[MIRO] Recognized:", transcript, "confidence:", event.results[0]?.[0]?.confidence);
+      if (transcript && transcript.length > 0) {
         setIsListening(false);
-        processQuery(finalQuery);
+        processQuery(transcript);
       }
     };
 
     recognition.onerror = (event: any) => {
+      console.warn("[MIRO] Speech error:", event.error);
       setIsListening(false);
       if (event.error === "no-speech") {
         setStatusText("No speech detected — tap orb to retry");
         toast("No speech detected. Tap the orb to try again.");
+        if (voiceEnabledRef.current) startWakeWordListening();
       } else if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         setStatusText("Mic blocked — type below");
         toast.error("Microphone access denied.");
         setVoiceEnabled(false);
+        voiceEnabledRef.current = false;
+      } else if (event.error === "network") {
+        setStatusText("Network error — tap orb to retry");
+        toast.error("Network error during speech recognition");
       } else if (event.error !== "aborted") {
-        console.error("Speech error:", event.error);
         setStatusText("Error — tap orb to retry");
       }
-      startWakeWordListening();
     };
 
     recognition.onend = () => {
-      if (!isProcessingRef.current) {
+      // If we didn't get a result and aren't processing, go back to wake word
+      if (!gotResult && !isProcessingRef.current) {
         setIsListening(false);
+        if (voiceEnabledRef.current) {
+          setTimeout(() => startWakeWordListening(), 300);
+        }
       }
     };
 
     try {
       recognition.start();
+      console.log("[MIRO] Command listening started");
     } catch (e) {
-      console.error("Failed to start recognition:", e);
+      console.error("[MIRO] Failed to start recognition:", e);
       setIsListening(false);
       toast.error("Could not start microphone");
     }
