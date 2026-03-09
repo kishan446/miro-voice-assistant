@@ -10,10 +10,9 @@ interface MicStatusIndicatorProps {
 
 const MicStatusIndicator = ({ voiceEnabled, isListening, isSpeaking, isProcessing }: MicStatusIndicatorProps) => {
   const getStatus = () => {
-    if (isProcessing) return { icon: Loader2, text: "Processing", color: "text-yellow-400", bg: "bg-yellow-400/10 border-yellow-400/30", spin: true };
     if (isSpeaking) return { icon: Mic, text: "Speaking", color: "text-primary", bg: "bg-primary/10 border-primary/30", spin: false };
-    if (isListening) return { icon: Mic, text: "Listening", color: "text-green-400", bg: "bg-green-400/10 border-green-400/30", spin: false };
-    if (voiceEnabled) return { icon: Mic, text: "Mic Ready", color: "text-primary/70", bg: "bg-primary/5 border-primary/20", spin: false };
+    if (isListening) return { icon: Mic, text: "LISTENING", color: "text-green-400", bg: "bg-green-400/10 border-green-400/30", spin: false };
+    if (voiceEnabled) return { icon: Mic, text: "LISTENING", color: "text-primary/70", bg: "bg-primary/5 border-primary/20", spin: false };
     return { icon: MicOff, text: "Mic Off", color: "text-muted-foreground", bg: "bg-muted/30 border-border", spin: false };
   };
 
