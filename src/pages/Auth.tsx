@@ -34,12 +34,21 @@ const Auth = () => {
         if (error) throw error;
         toast.success("Signed in successfully!");
       } else {
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
+        });
         if (error) throw error;
         if (data.session) {
           toast.success("Account created! You're signed in.");
         } else {
-          toast.success("Account created! You can now sign in.");
+          toast.success("Check your email for a verification link!", {
+            description: "Click the link in your email to activate your account.",
+            duration: 8000,
+          });
           setIsLogin(true);
         }
       }
