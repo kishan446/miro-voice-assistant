@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Send, Trash2, Paperclip, X, LogOut, Heart, Mic } from "lucide-react";
+import { Send, Trash2, Paperclip, X, LogOut, Heart } from "lucide-react";
 import SupportModal from "./SupportModal";
 import MiroOrb from "./MiroOrb";
 import VoiceVisualizer from "./VoiceVisualizer";
@@ -15,21 +15,25 @@ const MiroInterface = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [statusText, setStatusText] = useState("Tap the orb or type below");
+  const [statusText, setStatusText] = useState("Tap the orb to start voice chat");
   const [textInput, setTextInput] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
-  const recognitionRef = useRef<any>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const isProcessingRef = useRef(false);
-  const isSpeakingRef = useRef(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const navigate = useNavigate();
   const [supportOpen, setSupportOpen] = useState(false);
 
-  // Keep refs in sync with state
+  const recognitionRef = useRef<any>(null);
+  const isProcessingRef = useRef(false);
+  const isSpeakingRef = useRef(false);
+  const voiceEnabledRef = useRef(false);
+  const messagesRef = useRef<ChatMessage[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+
+  // Keep refs in sync
   useEffect(() => { isSpeakingRef.current = isSpeaking; }, [isSpeaking]);
+  useEffect(() => { voiceEnabledRef.current = voiceEnabled; }, [voiceEnabled]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const addMessage = useCallback((role: "user" | "assistant", content: string, attachments?: ChatAttachment[]) => {
     setMessages((prev) => [
@@ -47,9 +51,7 @@ const MiroInterface = () => {
   // Keep session alive
   useEffect(() => {
     const interval = setInterval(async () => {
-      try {
-        await supabase.auth.refreshSession();
-      } catch {}
+      try { await supabase.auth.refreshSession(); } catch {}
     }, 10 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -57,21 +59,22 @@ const MiroInterface = () => {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch {}
-      }
+      stopRecognition();
       window.speechSynthesis.cancel();
     };
   }, []);
 
-  const handleLogout = async () => {
+  const stopRecognition = () => {
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch {}
+      recognitionRef.current = null;
     }
+  };
+
+  const handleLogout = async () => {
+    stopRecognition();
     window.speechSynthesis.cancel();
-    try {
-      await supabase.auth.signOut({ scope: 'local' });
-    } catch {}
+    try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
     navigate("/auth", { replace: true });
   };
 
@@ -87,37 +90,22 @@ const MiroInterface = () => {
       const { error } = await supabase.storage
         .from("chat-attachments")
         .upload(path, file, { contentType: file.type });
-
-      if (error) {
-        toast.error(`Failed to upload ${file.name}`);
-        continue;
-      }
+      if (error) { toast.error(`Failed to upload ${file.name}`); continue; }
 
       const { data: signedData, error: signErr } = await supabase.storage
         .from("chat-attachments")
         .createSignedUrl(path, 3600);
-
-      if (signErr || !signedData) {
-        toast.error(`Failed to get URL for ${file.name}`);
-        continue;
-      }
+      if (signErr || !signedData) { toast.error(`Failed to get URL for ${file.name}`); continue; }
 
       uploaded.push({ name: file.name, type: file.type, url: signedData.signedUrl });
     }
     return uploaded;
   };
 
-  // Stop any active recognition
-  const stopRecognition = useCallback(() => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch {}
-      recognitionRef.current = null;
-    }
-  }, []);
+  // ========== CORE VOICE FUNCTIONS (using plain functions + refs to avoid circular deps) ==========
 
-  // Start wake word listening (only after user has granted mic via gesture)
-  const startWakeWordListening = useCallback(() => {
-    if (!voiceEnabled) return;
+  function startWakeWordListening() {
+    if (!voiceEnabledRef.current) return;
     stopRecognition();
 
     const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -129,14 +117,17 @@ const MiroInterface = () => {
     recognition.lang = "en-US";
     recognitionRef.current = recognition;
 
+    setStatusText('Say "MIRO" or tap orb');
+
     recognition.onresult = (event: any) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript.toLowerCase();
-        if (transcript.includes("miro") || transcript.includes("mirror") || transcript.includes("hero")) {
+        const transcript = event.results[i][0].transcript.toLowerCase().trim();
+        if (transcript.includes("miro") || transcript.includes("mirror") || transcript.includes("hero") || transcript.includes("meeru")) {
           stopRecognition();
           setIsAwake(true);
-          setStatusText("Activated! Speak now...");
-          setTimeout(() => startCommandListening(), 300);
+          setStatusText("Activated! Speak your command...");
+          // Delay to avoid picking up the wake word as command
+          setTimeout(() => startCommandListening(), 500);
           return;
         }
       }
@@ -148,42 +139,40 @@ const MiroInterface = () => {
         setVoiceEnabled(false);
         return;
       }
-      if (event.error !== "no-speech" && event.error !== "aborted" && event.error !== "network") {
-        console.error("Wake word error:", event.error);
+      // Auto-retry for recoverable errors
+      if (event.error !== "aborted") {
+        setTimeout(() => {
+          if (!isProcessingRef.current && !isSpeakingRef.current && voiceEnabledRef.current) {
+            startWakeWordListening();
+          }
+        }, 2000);
       }
-      // Retry after delay
-      setTimeout(() => {
-        if (!isProcessingRef.current && !isSpeakingRef.current) {
-          startWakeWordListening();
-        }
-      }, 2000);
     };
 
     recognition.onend = () => {
-      if (!isProcessingRef.current && !isSpeakingRef.current && voiceEnabled) {
+      // Auto-restart if not doing something else
+      if (!isProcessingRef.current && !isSpeakingRef.current && voiceEnabledRef.current) {
         setTimeout(() => startWakeWordListening(), 500);
       }
     };
 
     try { recognition.start(); } catch (e) {
-      console.warn("Could not start wake word:", e);
+      console.warn("Could not start wake word listener:", e);
     }
-  }, [voiceEnabled, stopRecognition]);
+  }
 
-  // Speak the AI response using browser TTS
-  const speakResponse = useCallback((text: string) => {
+  function speakResponse(text: string) {
     setIsSpeaking(true);
-    setStatusText("SPEAKING");
+    setStatusText("🔊 SPEAKING...");
     window.speechSynthesis.cancel();
 
-    // Small delay to ensure cancel completes
     setTimeout(() => {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.92;
-      utterance.pitch = 1.1;
+      utterance.rate = 0.95;
+      utterance.pitch = 1.05;
       utterance.volume = 1.0;
 
-      // Detect language
+      // Detect language from script
       const detectLang = (t: string): string => {
         if (/[\u0C80-\u0CFF]/.test(t)) return "kn-IN";
         if (/[\u0900-\u097F]/.test(t)) return "hi-IN";
@@ -197,35 +186,49 @@ const MiroInterface = () => {
       };
       utterance.lang = detectLang(text);
 
-      // Pick best voice
+      // Pick best available voice
       const voices = window.speechSynthesis.getVoices();
-      const langVoice = voices.find(v => v.lang === utterance.lang)
+      let voice = voices.find(v => v.lang === utterance.lang && v.name.toLowerCase().includes("female"))
+        || voices.find(v => v.lang === utterance.lang && v.name.toLowerCase().includes("natural"))
+        || voices.find(v => v.lang === utterance.lang)
         || voices.find(v => v.lang.startsWith(utterance.lang.split("-")[0]))
+        || voices.find(v => v.lang === "en-IN")
+        || voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("female"))
         || voices.find(v => v.lang.startsWith("en"));
-      if (langVoice) utterance.voice = langVoice;
+      if (voice) utterance.voice = voice;
 
-      utterance.onend = () => {
+      const onDone = () => {
         setIsSpeaking(false);
         setStatusText('Say "MIRO" or tap orb');
-        if (voiceEnabled) startWakeWordListening();
+        startWakeWordListening();
       };
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-        setStatusText('Say "MIRO" or tap orb');
-        if (voiceEnabled) startWakeWordListening();
-      };
+
+      utterance.onend = onDone;
+      utterance.onerror = onDone;
 
       window.speechSynthesis.speak(utterance);
-    }, 100);
-  }, [voiceEnabled, startWakeWordListening]);
 
-  // Process user query through edge function
-  const processQuery = useCallback(async (query: string, attachments?: ChatAttachment[]) => {
+      // Chrome bug: speechSynthesis stops after ~15s. Workaround: keep it alive.
+      const keepAlive = setInterval(() => {
+        if (!window.speechSynthesis.speaking) {
+          clearInterval(keepAlive);
+          return;
+        }
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      }, 10000);
+
+      utterance.onend = () => { clearInterval(keepAlive); onDone(); };
+      utterance.onerror = () => { clearInterval(keepAlive); onDone(); };
+    }, 150);
+  }
+
+  async function processQuery(query: string, attachments?: ChatAttachment[]) {
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
     setIsProcessing(true);
     setIsListening(false);
-    setStatusText("PROCESSING");
+    setStatusText("⚡ PROCESSING...");
     stopRecognition();
 
     addMessage("user", query, attachments);
@@ -233,7 +236,7 @@ const MiroInterface = () => {
     try {
       try { await supabase.auth.refreshSession(); } catch {}
 
-      const recentMessages = messages
+      const recentMessages = messagesRef.current
         .filter(m => m.content)
         .slice(-6)
         .map(m => ({ role: m.role, content: m.content }));
@@ -277,38 +280,37 @@ const MiroInterface = () => {
       const responseText = data?.response || "I couldn't process that request.";
       addMessage("assistant", responseText);
       setIsProcessing(false);
+      isProcessingRef.current = false;
       speakResponse(responseText);
     } catch (e: any) {
       console.error("Chat error:", e);
       const msg = e?.message || "";
       if (msg.includes("429")) {
-        toast.error("Too many requests. Please wait a moment.");
-        addMessage("assistant", "I'm getting too many requests right now. Please wait a moment and try again.");
+        toast.error("Too many requests. Please wait.");
+        addMessage("assistant", "Too many requests. Please wait a moment.");
       } else if (msg.includes("402")) {
         toast.error("AI credits exhausted.");
-        addMessage("assistant", "AI credits have run out. Please add credits to continue.");
+        addMessage("assistant", "AI credits have run out.");
       } else if (msg.includes("fetch") || msg.includes("network")) {
-        toast.error("Network error. Please check your connection.");
-        addMessage("assistant", "I'm having trouble connecting. Please check your internet and try again.");
+        toast.error("Network error.");
+        addMessage("assistant", "Network error. Please check your connection.");
       } else {
-        toast.error("Failed to process your request");
+        toast.error("Failed to process request");
         addMessage("assistant", "Sorry, I couldn't process that. Please try again.");
       }
       setIsProcessing(false);
-      setStatusText("Tap orb or type below");
-      if (voiceEnabled) startWakeWordListening();
-    } finally {
       isProcessingRef.current = false;
+      setStatusText("Tap orb or type below");
+      startWakeWordListening();
     }
-  }, [messages, addMessage, speakResponse, stopRecognition, voiceEnabled, startWakeWordListening, navigate]);
+  }
 
-  // Start command listening (single utterance capture)
-  const startCommandListening = useCallback(() => {
+  function startCommandListening() {
     stopRecognition();
 
     const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognitionAPI) {
-      toast.error("Speech recognition not supported in this browser");
+      toast.error("Speech recognition not supported");
       return;
     }
 
@@ -325,8 +327,11 @@ const MiroInterface = () => {
     recognition.onresult = (event: any) => {
       const transcript = event.results[0]?.[0]?.transcript?.trim();
       if (transcript) {
+        // Filter out wake word only transcripts
+        const cleaned = transcript.toLowerCase().replace(/miro|mirror|hero|meeru/gi, "").trim();
+        const finalQuery = cleaned.length > 1 ? transcript : transcript;
         setIsListening(false);
-        processQuery(transcript);
+        processQuery(finalQuery);
       }
     };
 
@@ -337,13 +342,13 @@ const MiroInterface = () => {
         toast("No speech detected. Tap the orb to try again.");
       } else if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         setStatusText("Mic blocked — type below");
-        toast.error("Microphone access denied. Please allow mic access in browser settings.");
+        toast.error("Microphone access denied.");
         setVoiceEnabled(false);
       } else if (event.error !== "aborted") {
         console.error("Speech error:", event.error);
         setStatusText("Error — tap orb to retry");
       }
-      if (voiceEnabled) startWakeWordListening();
+      startWakeWordListening();
     };
 
     recognition.onend = () => {
@@ -359,42 +364,37 @@ const MiroInterface = () => {
       setIsListening(false);
       toast.error("Could not start microphone");
     }
-  }, [processQuery, stopRecognition, voiceEnabled, startWakeWordListening]);
+  }
 
-  // Handle orb click — this is the USER GESTURE that enables mic
-  const handleOrbClick = useCallback(async () => {
+  // Handle orb click — USER GESTURE that enables mic
+  const handleOrbClick = async () => {
     // Stop any current speech
-    if (isSpeaking) {
+    if (isSpeakingRef.current) {
       window.speechSynthesis.cancel();
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
       setIsSpeaking(false);
     }
 
-    // If voice not yet enabled, request mic permission via user gesture
-    if (!voiceEnabled) {
+    // Request mic permission on first click
+    if (!voiceEnabledRef.current) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true },
         });
-        // Got permission — release the stream, SpeechRecognition will handle its own
         stream.getTracks().forEach(track => track.stop());
         setVoiceEnabled(true);
-        toast.success("Microphone enabled! Voice chat is active.");
+        voiceEnabledRef.current = true;
+        toast.success("Microphone enabled!");
       } catch (err) {
-        console.warn("Mic permission denied:", err);
-        toast.error("Microphone access denied. Please allow it in browser settings, or use text input.");
+        console.warn("Mic denied:", err);
+        toast.error("Microphone access denied. Use text input instead.");
         setStatusText("Mic blocked — type below");
         return;
       }
     }
 
     setIsAwake(true);
-    setStatusText("🎤 LISTENING — Speak now...");
     startCommandListening();
-  }, [isSpeaking, voiceEnabled, startCommandListening]);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -443,7 +443,6 @@ const MiroInterface = () => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background relative overflow-hidden px-4">
-      {/* Background grid effect */}
       <div
         className="absolute inset-0 opacity-[0.03]"
         style={{
@@ -453,7 +452,7 @@ const MiroInterface = () => {
       />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(187_100%_50%/0.05)_0%,transparent_70%)]" />
 
-      {/* Logout button */}
+      {/* Logout */}
       <motion.button
         onClick={handleLogout}
         className="absolute top-4 right-4 z-20 flex items-center gap-2 bg-card/50 backdrop-blur-sm border border-border rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors text-sm font-body"
@@ -501,7 +500,7 @@ const MiroInterface = () => {
         />
       </motion.div>
 
-      {/* Status text */}
+      {/* Status */}
       <motion.p
         className="z-10 mb-2 text-sm font-body text-muted-foreground"
         initial={{ opacity: 0 }}
@@ -524,7 +523,7 @@ const MiroInterface = () => {
         />
       </motion.div>
 
-      {/* Pending files preview */}
+      {/* Pending files */}
       {pendingFiles.length > 0 && (
         <motion.div
           className="z-10 w-full max-w-lg mb-2"
@@ -533,26 +532,14 @@ const MiroInterface = () => {
         >
           <div className="flex flex-wrap gap-2 px-1">
             {pendingFiles.map((file, i) => (
-              <div
-                key={i}
-                className="relative group flex items-center gap-2 bg-card/60 backdrop-blur-sm border border-border rounded-lg px-3 py-1.5"
-              >
+              <div key={i} className="relative group flex items-center gap-2 bg-card/60 backdrop-blur-sm border border-border rounded-lg px-3 py-1.5">
                 {file.type.startsWith("image/") ? (
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={file.name}
-                    className="w-8 h-8 rounded object-cover"
-                  />
+                  <img src={URL.createObjectURL(file)} alt={file.name} className="w-8 h-8 rounded object-cover" />
                 ) : (
                   <span className="text-xs">📎</span>
                 )}
-                <span className="text-xs text-muted-foreground truncate max-w-[100px]">
-                  {file.name}
-                </span>
-                <button
-                  onClick={() => removePendingFile(i)}
-                  className="text-muted-foreground hover:text-destructive transition-colors"
-                >
+                <span className="text-xs text-muted-foreground truncate max-w-[100px]">{file.name}</span>
+                <button onClick={() => removePendingFile(i)} className="text-muted-foreground hover:text-destructive transition-colors">
                   <X className="w-3 h-3" />
                 </button>
               </div>
@@ -561,7 +548,7 @@ const MiroInterface = () => {
         </motion.div>
       )}
 
-      {/* Text input with file upload */}
+      {/* Text input */}
       <motion.div
         className="z-10 w-full max-w-lg mb-4"
         initial={{ opacity: 0, y: 20 }}
@@ -569,25 +556,16 @@ const MiroInterface = () => {
         transition={{ delay: 0.6 }}
       >
         <form onSubmit={handleSubmit} className="flex gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*,.pdf,.txt,.csv,.json"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-
+          <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,.txt,.csv,.json" onChange={handleFileSelect} className="hidden" />
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isProcessing || isUploading}
             className="bg-card/50 backdrop-blur-sm border border-border rounded-lg px-3 py-3 text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Attach files or photos"
+            title="Attach files"
           >
             <Paperclip className="w-4 h-4" />
           </button>
-
           <input
             type="text"
             value={textInput}
@@ -608,7 +586,7 @@ const MiroInterface = () => {
               type="button"
               onClick={() => setMessages([])}
               className="bg-destructive/20 hover:bg-destructive/30 border border-destructive/50 rounded-lg px-4 py-3 text-destructive transition-colors"
-              title="Clear chat history"
+              title="Clear chat"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -616,7 +594,7 @@ const MiroInterface = () => {
         </form>
       </motion.div>
 
-      {/* Support / Donate floating button */}
+      {/* Support button */}
       <motion.button
         onClick={() => setSupportOpen(true)}
         className="fixed bottom-6 right-6 z-40 flex items-center gap-2 bg-card/80 backdrop-blur-sm border border-border rounded-full px-4 py-3 text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all group glow-cyan"
