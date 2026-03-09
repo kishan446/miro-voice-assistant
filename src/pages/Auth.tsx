@@ -80,6 +80,24 @@ const Auth = () => {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    setLoading(true);
+    try {
+      const { error } = await lovable.auth.signInWithOAuth("apple", {
+        redirect_uri: window.location.origin,
+      });
+      if (error) {
+        console.error("Apple auth error:", error);
+        toast.error("Apple sign-in failed. Please try again.");
+      }
+    } catch (err) {
+      console.error("Apple auth exception:", err);
+      toast.error("Apple sign-in failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background px-4">
       <div
@@ -107,7 +125,7 @@ const Auth = () => {
           type="button"
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-3 bg-card/50 backdrop-blur-sm border border-border rounded-lg px-4 py-3 text-foreground font-body text-sm transition-colors hover:bg-card/80 disabled:opacity-50 mb-4"
+          className="w-full flex items-center justify-center gap-3 bg-card/50 backdrop-blur-sm border border-border rounded-lg px-4 py-3 text-foreground font-body text-sm transition-colors hover:bg-card/80 disabled:opacity-50 mb-3"
         >
           <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
             <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
@@ -116,6 +134,18 @@ const Auth = () => {
             <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
           </svg>
           Continue with Google
+        </button>
+
+        <button
+          type="button"
+          onClick={handleAppleSignIn}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-3 bg-card/50 backdrop-blur-sm border border-border rounded-lg px-4 py-3 text-foreground font-body text-sm transition-colors hover:bg-card/80 disabled:opacity-50 mb-4"
+        >
+          <svg width="18" height="18" viewBox="0 0 18 22" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13.545 3.027c.78-.957 1.308-2.286 1.163-3.613-1.125.046-2.488.75-3.293 1.695-.723.836-1.355 2.172-1.185 3.455 1.256.098 2.537-.639 3.315-1.537zM14.69 9.27c-.028-2.895 2.364-4.285 2.47-4.35-1.345-1.968-3.44-2.238-4.185-2.27-1.782-.18-3.48 1.05-4.385 1.05-.92 0-2.327-1.023-3.825-.996C2.78 2.73.96 3.903.113 5.697c-1.74 3.016-.446 7.486 1.248 9.934.83 1.198 1.817 2.543 3.115 2.496 1.25-.05 1.722-.808 3.233-.808 1.498 0 1.932.808 3.245.783 1.345-.023 2.197-1.22 3.017-2.425.952-1.39 1.343-2.737 1.365-2.808-.03-.012-2.62-1.005-2.647-3.99z" fill="currentColor"/>
+          </svg>
+          Continue with Apple
         </button>
 
         <div className="flex items-center gap-3 mb-4">
