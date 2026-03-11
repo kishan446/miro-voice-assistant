@@ -530,18 +530,6 @@ const MiroInterface = () => {
       />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(187_100%_50%/0.05)_0%,transparent_70%)]" />
 
-      {/* Logout */}
-      <motion.button
-        onClick={handleLogout}
-        className="absolute top-4 right-4 z-20 flex items-center gap-2 bg-card/50 backdrop-blur-sm border border-border rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors text-sm font-body"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.8 }}
-        title="Sign out"
-      >
-        <LogOut className="w-4 h-4" />
-        <span className="hidden sm:inline">Sign Out</span>
-      </motion.button>
 
       {/* Title */}
       <motion.div
