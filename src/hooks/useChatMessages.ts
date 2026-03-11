@@ -23,16 +23,16 @@ export function useChatMessages(conversationId: string | null) {
       return;
     }
     setLoading(true);
+    // Try with profile join first, fallback to plain query
     const { data, error } = await supabase
       .from("chat_messages")
-      .select("*, sender_profile:profiles!chat_messages_sender_id_fkey(display_name, email)")
+      .select("*")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true })
       .limit(200);
 
     if (error) {
       console.error("Error fetching messages:", error);
-      // Fallback without join
       const { data: fallback } = await supabase
         .from("chat_messages")
         .select("*")
