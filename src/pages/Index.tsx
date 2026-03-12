@@ -12,10 +12,10 @@ import { useChatMessages } from "@/hooks/useChatMessages";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { conversations, loading: convsLoading, createConversation, deleteConversation, fetchConversations, inviteMember } = useConversations();
+  const { conversations, loading: convsLoading, createConversation, deleteConversation, renameConversation, fetchConversations, inviteMember } = useConversations();
 
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [showMiroMode, setShowMiroMode] = useState(true); // Show old Miro interface when no conversation selected
+  const [showMiroMode, setShowMiroMode] = useState(true);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [inviteTargetId, setInviteTargetId] = useState<string | null>(null);
   const [newGroupModalOpen, setNewGroupModalOpen] = useState(false);
@@ -24,7 +24,6 @@ const Index = () => {
   const activeConversation = conversations.find(c => c.id === activeConversationId) || null;
   const { messages, loading: msgsLoading, sendMessage } = useChatMessages(activeConversationId);
 
-  // Fetch member count when active conversation changes
   useEffect(() => {
     if (!activeConversationId) return;
     supabase
@@ -67,6 +66,10 @@ const Index = () => {
     }
   }, [deleteConversation, activeConversationId]);
 
+  const handleRenameConversation = useCallback(async (id: string, title: string) => {
+    await renameConversation(id, title);
+  }, [renameConversation]);
+
   const handleInvite = useCallback((conversationId: string) => {
     setInviteTargetId(conversationId);
     setInviteModalOpen(true);
@@ -91,6 +94,7 @@ const Index = () => {
         onNewChat={handleNewChat}
         onNewGroupChat={handleNewGroupChat}
         onDeleteConversation={handleDeleteConversation}
+        onRenameConversation={handleRenameConversation}
         onInvite={handleInvite}
         onLogout={handleLogout}
         loading={convsLoading}

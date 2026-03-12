@@ -35,6 +35,7 @@ export function useConversations() {
 
     if (error) {
       console.error("Error fetching conversations:", error);
+      setLoading(false);
       return;
     }
     setConversations((data as any[]) || []);
@@ -62,7 +63,6 @@ export function useConversations() {
       return null;
     }
 
-    // Add self as owner
     const convId = (data as any).id;
     await supabase.from("conversation_members").insert({
       conversation_id: convId,
@@ -83,6 +83,15 @@ export function useConversations() {
     setConversations(prev => prev.filter(c => c.id !== id));
   }, []);
 
+  const renameConversation = useCallback(async (id: string, title: string) => {
+    const { error } = await supabase.from("conversations").update({ title }).eq("id", id);
+    if (error) {
+      toast.error("Failed to rename conversation");
+      return;
+    }
+    setConversations(prev => prev.map(c => c.id === id ? { ...c, title } : c));
+  }, []);
+
   const getMembers = useCallback(async (conversationId: string): Promise<ConversationMember[]> => {
     const { data, error } = await supabase
       .from("conversation_members")
@@ -97,7 +106,6 @@ export function useConversations() {
   }, []);
 
   const inviteMember = useCallback(async (conversationId: string, email: string): Promise<boolean> => {
-    // Find user by email from profiles
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("id")
@@ -130,5 +138,5 @@ export function useConversations() {
     return true;
   }, []);
 
-  return { conversations, loading, createConversation, deleteConversation, fetchConversations, getMembers, inviteMember };
+  return { conversations, loading, createConversation, deleteConversation, renameConversation, fetchConversations, getMembers, inviteMember };
 }
