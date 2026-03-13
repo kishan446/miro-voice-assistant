@@ -80,6 +80,11 @@ const Index = () => {
     return inviteMember(inviteTargetId, email);
   }, [inviteTargetId, inviteMember]);
 
+  const handleBack = useCallback(() => {
+    setActiveConversationId(null);
+    setShowMiroMode(true);
+  }, []);
+
   const handleLogout = useCallback(async () => {
     try { await supabase.auth.signOut({ scope: "local" }); } catch {}
     navigate("/auth", { replace: true });
@@ -111,6 +116,7 @@ const Index = () => {
             onSendMessage={sendMessage}
             isGroup={activeConversation.is_group}
             memberCount={memberCount}
+            onBack={handleBack}
           />
         )}
       </div>
