@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Users, Bot, User } from "lucide-react";
+import { Send, Users, Bot, User, ArrowLeft, Share2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import ShareModal from "@/components/ShareModal";
 import type { DBChatMessage } from "@/hooks/useChatMessages";
 import type { Conversation } from "@/hooks/useConversations";
 
@@ -14,12 +15,14 @@ interface GroupChatViewProps {
   onSendMessage: (content: string, type?: "user" | "assistant" | "system", attachments?: any[]) => Promise<any>;
   isGroup: boolean;
   memberCount?: number;
+  onBack?: () => void;
 }
 
-const GroupChatView = ({ conversation, messages, loading, onSendMessage, isGroup, memberCount }: GroupChatViewProps) => {
+const GroupChatView = ({ conversation, messages, loading, onSendMessage, isGroup, memberCount, onBack }: GroupChatViewProps) => {
   const [textInput, setTextInput] = useState("");
   const [sending, setSending] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -36,7 +39,6 @@ const GroupChatView = ({ conversation, messages, loading, onSendMessage, isGroup
     }
   }, [messages, isProcessing]);
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -119,7 +121,16 @@ const GroupChatView = ({ conversation, messages, loading, onSendMessage, isGroup
   return (
     <div className="flex-1 flex flex-col h-full bg-background">
       {/* Header */}
-      <div className="px-5 py-3 border-b border-border flex items-center gap-3 bg-card/30 backdrop-blur-sm shrink-0">
+      <div className="px-4 py-3 border-b border-border flex items-center gap-2 bg-card/30 backdrop-blur-sm shrink-0">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            title="Back to home"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+        )}
         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isGroup ? "bg-primary/10" : "bg-secondary"}`}>
           {isGroup ? <Users className="w-4 h-4 text-primary" /> : <Bot className="w-4 h-4 text-muted-foreground" />}
         </div>
@@ -131,6 +142,15 @@ const GroupChatView = ({ conversation, messages, loading, onSendMessage, isGroup
             <p className="text-[11px] text-muted-foreground font-body">AI Assistant</p>
           ) : null}
         </div>
+        {/* Share button */}
+        <button
+          onClick={() => setShareOpen(true)}
+          disabled={messages.length === 0}
+          className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          title="Share conversation"
+        >
+          <Share2 className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Messages */}
@@ -178,7 +198,6 @@ const GroupChatView = ({ conversation, messages, loading, onSendMessage, isGroup
                     transition={{ duration: 0.2 }}
                     className="flex gap-3 group"
                   >
-                    {/* Avatar */}
                     <div className={`w-7 h-7 rounded-lg shrink-0 flex items-center justify-center text-xs font-bold mt-0.5 ${
                       isAssistant
                         ? "bg-primary text-primary-foreground"
@@ -190,7 +209,6 @@ const GroupChatView = ({ conversation, messages, loading, onSendMessage, isGroup
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      {/* Sender name */}
                       <div className="flex items-baseline gap-2 mb-1">
                         <span className={`text-xs font-semibold font-body ${isAssistant ? "text-primary" : "text-foreground"}`}>
                           {isAssistant ? "MIRO" : own ? "You" : getSenderName(msg)}
@@ -200,7 +218,6 @@ const GroupChatView = ({ conversation, messages, loading, onSendMessage, isGroup
                         </span>
                       </div>
 
-                      {/* Content */}
                       {isAssistant ? (
                         <div className="prose prose-sm prose-invert max-w-none font-body text-sm leading-relaxed [&_p]:m-0 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_p]:text-foreground [&_strong]:text-primary [&_code]:text-primary [&_code]:bg-secondary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_pre]:bg-secondary [&_pre]:rounded-lg [&_pre]:p-3 [&_ul]:my-2 [&_ol]:my-2 [&_li]:text-foreground [&_h1]:text-foreground [&_h2]:text-foreground [&_h3]:text-foreground [&_a]:text-primary [&_blockquote]:border-primary/30 [&_blockquote]:text-muted-foreground">
                           <ReactMarkdown>{msg.content}</ReactMarkdown>
@@ -215,7 +232,6 @@ const GroupChatView = ({ conversation, messages, loading, onSendMessage, isGroup
             </AnimatePresence>
           )}
 
-          {/* Processing indicator */}
           {isProcessing && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3">
               <div className="w-7 h-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center mt-0.5">
@@ -268,6 +284,14 @@ const GroupChatView = ({ conversation, messages, loading, onSendMessage, isGroup
           </p>
         </div>
       </div>
+
+      {/* Share Modal */}
+      <ShareModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        conversationTitle={conversation.title}
+        messages={messages}
+      />
     </div>
   );
 };
