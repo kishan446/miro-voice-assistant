@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, ImagePlus, Camera, Paperclip, X, Loader2, Sparkles } from "lucide-react";
+import { Plus, Camera, Paperclip, X, Loader2, Sparkles, Globe, Presentation } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -8,6 +8,8 @@ interface ChatAttachmentMenuProps {
   disabled?: boolean;
   onFilesAttached: (attachments: AttachmentItem[]) => void;
   onCreateImage: () => void;
+  onBuildWebsite?: () => void;
+  onCreatePPT?: () => void;
 }
 
 export interface AttachmentItem {
