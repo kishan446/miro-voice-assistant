@@ -19,7 +19,7 @@ export interface AttachmentItem {
   preview?: string;
 }
 
-const ChatAttachmentMenu = ({ disabled, onFilesAttached, onCreateImage }: ChatAttachmentMenuProps) => {
+const ChatAttachmentMenu = ({ disabled, onFilesAttached, onCreateImage, onBuildWebsite, onCreatePPT }: ChatAttachmentMenuProps) => {
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
