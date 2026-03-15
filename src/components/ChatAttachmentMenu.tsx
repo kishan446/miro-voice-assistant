@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, ImagePlus, Camera, Paperclip, X, Loader2, Sparkles } from "lucide-react";
+import { Plus, Camera, Paperclip, X, Loader2, Sparkles, Globe, Presentation } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -8,6 +8,8 @@ interface ChatAttachmentMenuProps {
   disabled?: boolean;
   onFilesAttached: (attachments: AttachmentItem[]) => void;
   onCreateImage: () => void;
+  onBuildWebsite?: () => void;
+  onCreatePPT?: () => void;
 }
 
 export interface AttachmentItem {
@@ -17,7 +19,7 @@ export interface AttachmentItem {
   preview?: string;
 }
 
-const ChatAttachmentMenu = ({ disabled, onFilesAttached, onCreateImage }: ChatAttachmentMenuProps) => {
+const ChatAttachmentMenu = ({ disabled, onFilesAttached, onCreateImage, onBuildWebsite, onCreatePPT }: ChatAttachmentMenuProps) => {
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -94,10 +96,22 @@ const ChatAttachmentMenu = ({ disabled, onFilesAttached, onCreateImage }: ChatAt
     onCreateImage();
   };
 
+  const handleBuildWebsite = () => {
+    setOpen(false);
+    onBuildWebsite?.();
+  };
+
+  const handleCreatePPT = () => {
+    setOpen(false);
+    onCreatePPT?.();
+  };
+
   const menuItems = [
     { label: "Add photos & files", icon: Paperclip, onClick: handleFileSelect },
     { label: "Take photo", icon: Camera, onClick: handleCameraCapture },
     { label: "Create image", icon: Sparkles, onClick: handleCreateImage },
+    { label: "Build website", icon: Globe, onClick: handleBuildWebsite },
+    { label: "Create PPT", icon: Presentation, onClick: handleCreatePPT },
   ];
 
   return (

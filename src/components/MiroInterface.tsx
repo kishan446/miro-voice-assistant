@@ -1,11 +1,14 @@
 import { useState, useCallback, useRef, useEffect, FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Send, Trash2, Paperclip, X, LogOut, Heart } from "lucide-react";
+import { Send, Trash2, Paperclip, X, LogOut, Heart, Camera, Sparkles, Globe, Presentation, ImagePlus } from "lucide-react";
 import SupportModal from "./SupportModal";
 import MiroOrb from "./MiroOrb";
 import VoiceVisualizer from "./VoiceVisualizer";
 import MicStatusIndicator from "./MicStatusIndicator";
 import ChatConsole, { type ChatMessage, type ChatAttachment } from "./ChatConsole";
+import CreateImageModal from "./CreateImageModal";
+import WebsiteGeneratorModal from "./WebsiteGeneratorModal";
+import PresentationModal from "./PresentationModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +25,10 @@ const MiroInterface = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [createImageOpen, setCreateImageOpen] = useState(false);
+  const [websiteGenOpen, setWebsiteGenOpen] = useState(false);
+  const [presentationOpen, setPresentationOpen] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const recognitionRef = useRef<any>(null);
   const isProcessingRef = useRef(false);
@@ -606,6 +613,52 @@ const MiroInterface = () => {
         </motion.div>
       )}
 
+      {/* Quick Action Buttons */}
+      <motion.div
+        className="z-10 w-full max-w-lg mb-4"
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.55 }}
+      >
+        <div className="flex flex-wrap justify-center gap-2">
+          {[
+            { label: "Upload Files", icon: Paperclip, onClick: () => fileInputRef.current?.click() },
+            { label: "Camera", icon: Camera, onClick: () => cameraInputRef.current?.click() },
+            { label: "Create Image", icon: Sparkles, onClick: () => setCreateImageOpen(true) },
+            { label: "Build Website", icon: Globe, onClick: () => setWebsiteGenOpen(true) },
+            { label: "Create PPT", icon: Presentation, onClick: () => setPresentationOpen(true) },
+          ].map((btn) => (
+            <button
+              key={btn.label}
+              onClick={btn.onClick}
+              disabled={isProcessing || isUploading}
+              className="flex items-center gap-2 px-4 py-2.5 bg-card/50 backdrop-blur-sm border border-border rounded-xl text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-card/80 transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+            >
+              <btn.icon className="w-4 h-4" />
+              <span className="hidden sm:inline">{btn.label}</span>
+            </button>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Hidden camera input */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const files = Array.from(e.target.files || []);
+          if (files.length > 0) {
+            const valid = files.filter(f => f.size <= 10 * 1024 * 1024);
+            if (valid.length < files.length) toast.error("Some files exceed 10MB limit");
+            setPendingFiles(prev => [...prev, ...valid].slice(0, 5));
+          }
+          if (cameraInputRef.current) cameraInputRef.current.value = "";
+        }}
+      />
+
       {/* Text input */}
       <motion.div
         className="z-10 w-full max-w-lg mb-4"
@@ -667,6 +720,9 @@ const MiroInterface = () => {
       </motion.button>
 
       <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
+      <CreateImageModal open={createImageOpen} onClose={() => setCreateImageOpen(false)} onImageCreated={(url, prompt) => { addMessage("user", `🎨 Created image: "${prompt}"`); setCreateImageOpen(false); }} />
+      <WebsiteGeneratorModal open={websiteGenOpen} onClose={() => setWebsiteGenOpen(false)} />
+      <PresentationModal open={presentationOpen} onClose={() => setPresentationOpen(false)} />
     </div>
   );
 };

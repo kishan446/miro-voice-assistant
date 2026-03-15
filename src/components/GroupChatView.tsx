@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import ShareModal from "@/components/ShareModal";
 import ChatAttachmentMenu, { type AttachmentItem } from "@/components/ChatAttachmentMenu";
 import CreateImageModal from "@/components/CreateImageModal";
+import WebsiteGeneratorModal from "@/components/WebsiteGeneratorModal";
+import PresentationModal from "@/components/PresentationModal";
 import type { DBChatMessage } from "@/hooks/useChatMessages";
 import type { Conversation } from "@/hooks/useConversations";
 
@@ -26,6 +28,8 @@ const GroupChatView = ({ conversation, messages, loading, onSendMessage, isGroup
   const [isProcessing, setIsProcessing] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [createImageOpen, setCreateImageOpen] = useState(false);
+  const [websiteGenOpen, setWebsiteGenOpen] = useState(false);
+  const [presentationOpen, setPresentationOpen] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<AttachmentItem[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -287,6 +291,8 @@ const GroupChatView = ({ conversation, messages, loading, onSendMessage, isGroup
                 disabled={sending || isProcessing}
                 onFilesAttached={handleFilesAttached}
                 onCreateImage={() => setCreateImageOpen(true)}
+                onBuildWebsite={() => setWebsiteGenOpen(true)}
+                onCreatePPT={() => setPresentationOpen(true)}
               />
               <textarea
                 ref={textareaRef}
@@ -313,6 +319,8 @@ const GroupChatView = ({ conversation, messages, loading, onSendMessage, isGroup
 
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} conversationTitle={conversation.title} messages={messages} />
       <CreateImageModal open={createImageOpen} onClose={() => setCreateImageOpen(false)} onImageCreated={handleImageCreated} />
+      <WebsiteGeneratorModal open={websiteGenOpen} onClose={() => setWebsiteGenOpen(false)} />
+      <PresentationModal open={presentationOpen} onClose={() => setPresentationOpen(false)} />
     </div>
   );
 };
