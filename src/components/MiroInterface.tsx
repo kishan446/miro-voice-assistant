@@ -1,11 +1,14 @@
 import { useState, useCallback, useRef, useEffect, FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Send, Trash2, Paperclip, X, LogOut, Heart } from "lucide-react";
+import { Send, Trash2, Paperclip, X, LogOut, Heart, Camera, Sparkles, Globe, Presentation, ImagePlus } from "lucide-react";
 import SupportModal from "./SupportModal";
 import MiroOrb from "./MiroOrb";
 import VoiceVisualizer from "./VoiceVisualizer";
 import MicStatusIndicator from "./MicStatusIndicator";
 import ChatConsole, { type ChatMessage, type ChatAttachment } from "./ChatConsole";
+import CreateImageModal from "./CreateImageModal";
+import WebsiteGeneratorModal from "./WebsiteGeneratorModal";
+import PresentationModal from "./PresentationModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
