@@ -319,6 +319,8 @@ const GroupChatView = ({ conversation, messages, loading, onSendMessage, isGroup
 
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} conversationTitle={conversation.title} messages={messages} />
       <CreateImageModal open={createImageOpen} onClose={() => setCreateImageOpen(false)} onImageCreated={handleImageCreated} />
+      <WebsiteGeneratorModal open={websiteGenOpen} onClose={() => setWebsiteGenOpen(false)} />
+      <PresentationModal open={presentationOpen} onClose={() => setPresentationOpen(false)} />
     </div>
   );
 };
