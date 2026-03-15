@@ -720,6 +720,9 @@ const MiroInterface = () => {
       </motion.button>
 
       <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
+      <CreateImageModal open={createImageOpen} onClose={() => setCreateImageOpen(false)} onImageCreated={(url, prompt) => { addMessage("user", `🎨 Created image: "${prompt}"`); setCreateImageOpen(false); }} />
+      <WebsiteGeneratorModal open={websiteGenOpen} onClose={() => setWebsiteGenOpen(false)} />
+      <PresentationModal open={presentationOpen} onClose={() => setPresentationOpen(false)} />
     </div>
   );
 };
