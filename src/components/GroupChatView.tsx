@@ -291,6 +291,8 @@ const GroupChatView = ({ conversation, messages, loading, onSendMessage, isGroup
                 disabled={sending || isProcessing}
                 onFilesAttached={handleFilesAttached}
                 onCreateImage={() => setCreateImageOpen(true)}
+                onBuildWebsite={() => setWebsiteGenOpen(true)}
+                onCreatePPT={() => setPresentationOpen(true)}
               />
               <textarea
                 ref={textareaRef}
