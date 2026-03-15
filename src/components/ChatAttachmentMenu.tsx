@@ -96,10 +96,22 @@ const ChatAttachmentMenu = ({ disabled, onFilesAttached, onCreateImage, onBuildW
     onCreateImage();
   };
 
+  const handleBuildWebsite = () => {
+    setOpen(false);
+    onBuildWebsite?.();
+  };
+
+  const handleCreatePPT = () => {
+    setOpen(false);
+    onCreatePPT?.();
+  };
+
   const menuItems = [
     { label: "Add photos & files", icon: Paperclip, onClick: handleFileSelect },
     { label: "Take photo", icon: Camera, onClick: handleCameraCapture },
     { label: "Create image", icon: Sparkles, onClick: handleCreateImage },
+    { label: "Build website", icon: Globe, onClick: handleBuildWebsite },
+    { label: "Create PPT", icon: Presentation, onClick: handleCreatePPT },
   ];
 
   return (
