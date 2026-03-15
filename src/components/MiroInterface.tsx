@@ -25,6 +25,10 @@ const MiroInterface = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [createImageOpen, setCreateImageOpen] = useState(false);
+  const [websiteGenOpen, setWebsiteGenOpen] = useState(false);
+  const [presentationOpen, setPresentationOpen] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const recognitionRef = useRef<any>(null);
   const isProcessingRef = useRef(false);
