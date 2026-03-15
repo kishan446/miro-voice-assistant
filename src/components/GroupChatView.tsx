@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import ShareModal from "@/components/ShareModal";
 import ChatAttachmentMenu, { type AttachmentItem } from "@/components/ChatAttachmentMenu";
 import CreateImageModal from "@/components/CreateImageModal";
+import WebsiteGeneratorModal from "@/components/WebsiteGeneratorModal";
+import PresentationModal from "@/components/PresentationModal";
 import type { DBChatMessage } from "@/hooks/useChatMessages";
 import type { Conversation } from "@/hooks/useConversations";
 
