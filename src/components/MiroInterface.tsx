@@ -615,31 +615,56 @@ const MiroInterface = () => {
         </motion.div>
       )}
 
-      {/* Quick Action Buttons */}
+      {/* Quick Actions — single + button with popup menu */}
       <motion.div
-        className="z-10 w-full max-w-lg mb-4"
+        className="z-10 w-full max-w-lg mb-4 flex justify-center"
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.55 }}
       >
-        <div className="flex flex-wrap justify-center gap-2">
-          {[
-            { label: "Upload Files", icon: Paperclip, onClick: () => fileInputRef.current?.click() },
-            { label: "Camera", icon: Camera, onClick: () => cameraInputRef.current?.click() },
-            { label: "Create Image", icon: Sparkles, onClick: () => setCreateImageOpen(true) },
-            { label: "Build Website", icon: Globe, onClick: () => setWebsiteGenOpen(true) },
-            { label: "Create PPT", icon: Presentation, onClick: () => setPresentationOpen(true) },
-          ].map((btn) => (
-            <button
-              key={btn.label}
-              onClick={btn.onClick}
-              disabled={isProcessing || isUploading}
-              className="flex items-center gap-2 px-4 py-2.5 bg-card/50 backdrop-blur-sm border border-border rounded-xl text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-card/80 transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
-            >
-              <btn.icon className="w-4 h-4" />
-              <span className="hidden sm:inline">{btn.label}</span>
-            </button>
-          ))}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setActionsMenuOpen((v) => !v)}
+            disabled={isProcessing || isUploading}
+            className="flex items-center gap-2 px-5 py-2.5 bg-card/60 backdrop-blur-sm border border-border rounded-full text-sm font-body text-foreground hover:border-primary/50 hover:bg-card/90 transition-all disabled:opacity-40 active:scale-95 border-glow"
+            aria-haspopup="menu"
+            aria-expanded={actionsMenuOpen}
+          >
+            {actionsMenuOpen ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            <span>Actions</span>
+          </button>
+
+          <AnimatePresence>
+            {actionsMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-card border border-border rounded-xl shadow-xl overflow-hidden min-w-[220px] z-50"
+                role="menu"
+              >
+                {[
+                  { label: "Upload Files", icon: Paperclip, onClick: () => fileInputRef.current?.click() },
+                  { label: "Camera", icon: Camera, onClick: () => cameraInputRef.current?.click() },
+                  { label: "Create Image", icon: Sparkles, onClick: () => setCreateImageOpen(true) },
+                  { label: "Build Website", icon: Globe, onClick: () => setWebsiteGenOpen(true) },
+                  { label: "Create PPT", icon: Presentation, onClick: () => setPresentationOpen(true) },
+                ].map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={() => { setActionsMenuOpen(false); item.onClick(); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-body text-foreground hover:bg-secondary/60 transition-colors text-left"
+                    role="menuitem"
+                  >
+                    <item.icon className="w-4 h-4 text-muted-foreground" />
+                    {item.label}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
 
