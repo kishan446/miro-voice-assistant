@@ -695,15 +695,6 @@ const MiroInterface = () => {
       >
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,.txt,.csv,.json" onChange={handleFileSelect} className="hidden" />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isProcessing || isUploading}
-            className="bg-card/50 backdrop-blur-sm border border-border rounded-lg px-3 py-3 text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Attach files"
-          >
-            <Paperclip className="w-4 h-4" />
-          </button>
           <input
             type="text"
             value={textInput}
