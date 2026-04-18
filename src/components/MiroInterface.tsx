@@ -615,59 +615,6 @@ const MiroInterface = () => {
         </motion.div>
       )}
 
-      {/* Quick Actions — single paperclip button containing ALL actions */}
-      <motion.div
-        className="z-10 w-full max-w-lg mb-4 flex justify-center"
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.55 }}
-      >
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setActionsMenuOpen((v) => !v)}
-            disabled={isProcessing || isUploading}
-            className="w-12 h-12 flex items-center justify-center bg-card/60 backdrop-blur-sm border border-border rounded-2xl text-foreground hover:border-primary/50 hover:bg-card/90 transition-all disabled:opacity-40 active:scale-95 border-glow"
-            aria-haspopup="menu"
-            aria-expanded={actionsMenuOpen}
-            aria-label="Open actions menu"
-          >
-            {actionsMenuOpen ? <X className="w-5 h-5" /> : <Paperclip className="w-5 h-5" />}
-          </button>
-
-          <AnimatePresence>
-            {actionsMenuOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                transition={{ duration: 0.15 }}
-                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-card border border-border rounded-xl shadow-xl overflow-hidden min-w-[220px] z-50"
-                role="menu"
-              >
-                {[
-                  { label: "Upload Files", icon: Paperclip, onClick: () => fileInputRef.current?.click() },
-                  { label: "Camera", icon: Camera, onClick: () => cameraInputRef.current?.click() },
-                  { label: "Create Image", icon: Sparkles, onClick: () => setCreateImageOpen(true) },
-                  { label: "Build Website", icon: Globe, onClick: () => setWebsiteGenOpen(true) },
-                  { label: "Create PPT", icon: Presentation, onClick: () => setPresentationOpen(true) },
-                ].map((item) => (
-                  <button
-                    key={item.label}
-                    onClick={() => { setActionsMenuOpen(false); item.onClick(); }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-body text-foreground hover:bg-secondary/60 transition-colors text-left"
-                    role="menuitem"
-                  >
-                    <item.icon className="w-4 h-4 text-muted-foreground" />
-                    {item.label}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </motion.div>
-
       {/* Hidden camera input */}
       <input
         ref={cameraInputRef}
@@ -695,14 +642,65 @@ const MiroInterface = () => {
       >
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,.txt,.csv,.json" onChange={handleFileSelect} className="hidden" />
-          <input
-            type="text"
-            value={textInput}
-            onChange={(e) => setTextInput(e.target.value)}
-            placeholder={isUploading ? "Uploading..." : "Type a command to MIRO..."}
-            disabled={isProcessing || isUploading}
-            className="flex-1 bg-card/50 backdrop-blur-sm border border-border rounded-lg px-4 py-3 text-foreground font-body text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary border-glow"
-          />
+
+          <div className="relative flex-1">
+            {/* Paperclip actions menu — inside left of textbox */}
+            <div className="absolute left-2 top-1/2 -translate-y-1/2 z-20">
+              <button
+                type="button"
+                onClick={() => setActionsMenuOpen((v) => !v)}
+                disabled={isProcessing || isUploading}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-all disabled:opacity-40 active:scale-95"
+                aria-haspopup="menu"
+                aria-expanded={actionsMenuOpen}
+                aria-label="Open actions menu"
+              >
+                {actionsMenuOpen ? <X className="w-4 h-4" /> : <Paperclip className="w-4 h-4" />}
+              </button>
+
+              <AnimatePresence>
+                {actionsMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute bottom-full left-0 mb-2 bg-card border border-border rounded-xl shadow-xl overflow-hidden min-w-[220px] z-50"
+                    role="menu"
+                  >
+                    {[
+                      { label: "Upload Files", icon: Paperclip, onClick: () => fileInputRef.current?.click() },
+                      { label: "Camera", icon: Camera, onClick: () => cameraInputRef.current?.click() },
+                      { label: "Create Image", icon: Sparkles, onClick: () => setCreateImageOpen(true) },
+                      { label: "Build Website", icon: Globe, onClick: () => setWebsiteGenOpen(true) },
+                      { label: "Create PPT", icon: Presentation, onClick: () => setPresentationOpen(true) },
+                    ].map((item) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => { setActionsMenuOpen(false); item.onClick(); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-body text-foreground hover:bg-secondary/60 transition-colors text-left"
+                        role="menuitem"
+                      >
+                        <item.icon className="w-4 h-4 text-muted-foreground" />
+                        {item.label}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <input
+              type="text"
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              placeholder={isUploading ? "Uploading..." : "Type a command to MIRO..."}
+              disabled={isProcessing || isUploading}
+              className="w-full bg-card/50 backdrop-blur-sm border border-border rounded-lg pl-12 pr-4 py-3 text-foreground font-body text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary border-glow"
+            />
+          </div>
+
           <button
             type="submit"
             disabled={isProcessing || isUploading || (!textInput.trim() && pendingFiles.length === 0)}
