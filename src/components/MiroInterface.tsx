@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Send, Trash2, Paperclip, X, LogOut, Heart, Camera, Sparkles, Globe, Presentation, ImagePlus } from "lucide-react";
+import { Send, Trash2, Paperclip, X, LogOut, Heart, Camera, Sparkles, Globe, Presentation, ImagePlus, Plus } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
 import SupportModal from "./SupportModal";
 import MiroOrb from "./MiroOrb";
 import VoiceVisualizer from "./VoiceVisualizer";
