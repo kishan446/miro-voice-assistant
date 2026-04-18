@@ -615,56 +615,76 @@ const MiroInterface = () => {
         </motion.div>
       )}
 
-      {/* Quick Actions — single + button with popup menu */}
+      {/* Quick Actions — Camera & Upload always visible, + menu for AI tools */}
       <motion.div
         className="z-10 w-full max-w-lg mb-4 flex justify-center"
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.55 }}
       >
-        <div className="relative">
+        <div className="flex items-center gap-2 flex-wrap justify-center">
           <button
             type="button"
-            onClick={() => setActionsMenuOpen((v) => !v)}
+            onClick={() => fileInputRef.current?.click()}
             disabled={isProcessing || isUploading}
-            className="flex items-center gap-2 px-5 py-2.5 bg-card/60 backdrop-blur-sm border border-border rounded-full text-sm font-body text-foreground hover:border-primary/50 hover:bg-card/90 transition-all disabled:opacity-40 active:scale-95 border-glow"
-            aria-haspopup="menu"
-            aria-expanded={actionsMenuOpen}
+            className="flex items-center gap-2 px-4 py-2.5 bg-card/60 backdrop-blur-sm border border-border rounded-full text-sm font-body text-foreground hover:border-primary/50 hover:bg-card/90 transition-all disabled:opacity-40 active:scale-95"
           >
-            {actionsMenuOpen ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            <span>Actions</span>
+            <Paperclip className="w-4 h-4" />
+            <span>Upload Files</span>
           </button>
 
-          <AnimatePresence>
-            {actionsMenuOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                transition={{ duration: 0.15 }}
-                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-card border border-border rounded-xl shadow-xl overflow-hidden min-w-[220px] z-50"
-                role="menu"
-              >
-                {[
-                  { label: "Upload Files", icon: Paperclip, onClick: () => fileInputRef.current?.click() },
-                  { label: "Camera", icon: Camera, onClick: () => cameraInputRef.current?.click() },
-                  { label: "Create Image", icon: Sparkles, onClick: () => setCreateImageOpen(true) },
-                  { label: "Build Website", icon: Globe, onClick: () => setWebsiteGenOpen(true) },
-                  { label: "Create PPT", icon: Presentation, onClick: () => setPresentationOpen(true) },
-                ].map((item) => (
-                  <button
-                    key={item.label}
-                    onClick={() => { setActionsMenuOpen(false); item.onClick(); }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-body text-foreground hover:bg-secondary/60 transition-colors text-left"
-                    role="menuitem"
-                  >
-                    <item.icon className="w-4 h-4 text-muted-foreground" />
-                    {item.label}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <button
+            type="button"
+            onClick={() => cameraInputRef.current?.click()}
+            disabled={isProcessing || isUploading}
+            className="flex items-center gap-2 px-4 py-2.5 bg-card/60 backdrop-blur-sm border border-border rounded-full text-sm font-body text-foreground hover:border-primary/50 hover:bg-card/90 transition-all disabled:opacity-40 active:scale-95"
+          >
+            <Camera className="w-4 h-4" />
+            <span>Camera</span>
+          </button>
+
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setActionsMenuOpen((v) => !v)}
+              disabled={isProcessing || isUploading}
+              className="flex items-center gap-2 px-4 py-2.5 bg-card/60 backdrop-blur-sm border border-border rounded-full text-sm font-body text-foreground hover:border-primary/50 hover:bg-card/90 transition-all disabled:opacity-40 active:scale-95 border-glow"
+              aria-haspopup="menu"
+              aria-expanded={actionsMenuOpen}
+            >
+              {actionsMenuOpen ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              <span>More</span>
+            </button>
+
+            <AnimatePresence>
+              {actionsMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute bottom-full right-0 mb-2 bg-card border border-border rounded-xl shadow-xl overflow-hidden min-w-[200px] z-50"
+                  role="menu"
+                >
+                  {[
+                    { label: "Create Image", icon: Sparkles, onClick: () => setCreateImageOpen(true) },
+                    { label: "Build Website", icon: Globe, onClick: () => setWebsiteGenOpen(true) },
+                    { label: "Create PPT", icon: Presentation, onClick: () => setPresentationOpen(true) },
+                  ].map((item) => (
+                    <button
+                      key={item.label}
+                      onClick={() => { setActionsMenuOpen(false); item.onClick(); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm font-body text-foreground hover:bg-secondary/60 transition-colors text-left"
+                      role="menuitem"
+                    >
+                      <item.icon className="w-4 h-4 text-muted-foreground" />
+                      {item.label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </motion.div>
 
